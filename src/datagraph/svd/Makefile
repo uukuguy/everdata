@@ -1,4 +1,5 @@
 TARGET = libsvd.a
+SVDLIBC = svdlibc-20141210
 REDSVD = redsvd-0.2.0
 
 OBJS = svd.cc.o \
@@ -10,15 +11,26 @@ OBJS = svd.cc.o \
 
 include ../../Makefile.common
 
-FINAL_CXXFLAGS += -I../model -I../../utils -I/opt/local/include/libxml2 -I/opt/local/include/octave-3.8.2/octave
+FINAL_CXXFLAGS += -I../model -I./redsvd/src -I/opt/local/include/libxml2 -I/opt/local/include/octave-3.8.2/octave
 
 all: ${TARGET}
 
-${TARGET}: redsvd ${OBJS}
+${TARGET}: svdlibc redsvd ${OBJS}
 	${AR} cruv ${TARGET} ${OBJS}
 
 clean:
-	rm -fr ${TARGET} ${OBJS} ${REDSVD} redsvd
+	rm -fr ${TARGET} ${OBJS} ${REDSVD} redsvd ${SVDLIBC} svdlibc
+
+# ---------------- svdlibc ----------------
+
+.PHONY: svdlibc
+
+svdlibc: ${SVDLIBC}
+	${MAKE} -C ${SVDLIBC}
+
+${SVDLIBC}:
+	tar zxvf ${SVDLIBC}.tar.gz && \
+	ln -s ${SVDLIBC} svdlibc
 
 # ---------------- redsvd ----------------
 
@@ -29,5 +41,5 @@ redsvd: ${REDSVD}
 
 ${REDSVD}:
 	tar zxvf ${REDSVD}.tar.gz && \
-	ln -s ${REDSVD}/src redsvd
+	ln -s ${REDSVD} redsvd
 

@@ -1,3 +1,12 @@
+bin/
+redsvd
+redsvd*/
+libmmseg
+libmmseg*/
+svdlibc
+svdlibc*/
+
+
 # Compiled Object files
 *.slo
 *.lo

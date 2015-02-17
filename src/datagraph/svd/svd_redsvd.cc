@@ -2,10 +2,10 @@
  * @file   svd_redsvd.cc
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-12-16 21:41:18
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include "docset.h"
@@ -18,7 +18,7 @@
 #include <eigen3/Eigen/SVD>
 #include <eigen3/Eigen/Sparse>
 
-#include "redsvd/redsvd.hpp"
+#include "redsvd.hpp"
 
 #include <iostream>
 
@@ -40,7 +40,7 @@ typedef struct svd_data_t{
         //uint32_t col = doc_get_id(doc);
         //double term_tfidf = doc_get_term_tfidf(doc, term);
         //triple.push_back(Triplet<float>(row, col, term_tfidf));
-    //} 
+    //}
 //}
 
 /* ==================== docset_do_svd_redsvd() ==================== */
@@ -57,7 +57,7 @@ void docset_do_svd_redsvd(docset_t *docset, uint32_t dimensions)
     smat_t *tfm = pDocset->calculate_tfmatrix();
     //MatrixXf A(numRows, numCols);
     //A.setZero();
-    
+
     //Eigen::SparseMatrix<float> A(numRows, numCols);
     //SMatrixXf A(numRows, numCols);
     Eigen::SparseMatrix<float, Eigen::RowMajor> A(numRows, numCols);
@@ -87,7 +87,7 @@ void docset_do_svd_redsvd(docset_t *docset, uint32_t dimensions)
     notice_log("svd prepare: %llu.%03llu sec.", (msec1 - msec0) / 1000, (msec1 - msec0) % 1000);
 
     // *****************************************
-    
+
     //MatrixXf A = MatrixXf::Random(3,2);
 
     REDSVD::RedSVD svdOfA(A, dimensions);
@@ -106,7 +106,7 @@ void docset_do_svd_redsvd(docset_t *docset, uint32_t dimensions)
     //Vector3f rhs(1, 0, 0);
     //std::cout << "Now consider this rhs vector:" << std::endl << rhs << std::endl;
     //std::cout << "A least-squares solution of m*x = rhs is:" << std::endl << svd.solve(rhs) << std::endl;
-    
+
     GET_TIME_MILLIS(msec3);
     notice_log("svd do: %llu.%03llu sec.", (msec3 - msec1) / 1000, (msec3 - msec1) % 1000);
 

@@ -57,7 +57,7 @@ static void usage(int status)
 
 extern void docset_do_svd_svdlibc(docset_t *docset, uint32_t dimensions);
 extern void docset_do_svd_armadillo(docset_t *docset, uint32_t dimensions);
-extern void docset_do_svd_octave(docset_t *docset, uint32_t dimensions);
+//extern void docset_do_svd_octave(docset_t *docset, uint32_t dimensions);
 extern void docset_do_svd_eigen(docset_t *docset, uint32_t dimensions);
 extern void docset_do_svd_redsvd(docset_t *docset, uint32_t dimensions);
 
@@ -163,9 +163,9 @@ int main(int argc, char *argv[])
     notice_log("Do SVD ...");
 
     uint32_t dimensions = 100;
-    //docset_do_svd_svdlibc(docset, dimensions);
+    docset_do_svd_svdlibc(docset, dimensions);
     //docset_do_svd_armadillo(docset, dimensions);
-    docset_do_svd_octave(docset, dimensions);
+    //docset_do_svd_octave(docset, dimensions);
     //docset_do_svd_eigen(docset, dimensions);
     //docset_do_svd_redsvd(docset, dimensions);
 

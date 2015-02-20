@@ -1,46 +1,59 @@
 
 EVERDATA_OBJS = everdata.c.o zpipe.c.o
 
-EDBROKER = ../bin/edbroker
+EDBROKER = ../../bin/edbroker
 EDBROKER_OBJS = edbroker_main.c.o edbroker.c.o
 
-EDWORKER = ../bin/edworker
+EDWORKER = ../../bin/edworker
 EDWORKER_OBJS = edworker_main.c.o edworker.c.o datanode.c.o container.c.o bucket.c.o channel.c.o object.c.o bucketdb.c.o
-EDCLIENT = ../bin/edclient
+EDCLIENT = ../../bin/edclient
 EDCLIENT_OBJS = edclient_main.c.o edclient.c.o
 
-EDFS = ../bin/edfs
+EDFS = ../../bin/edfs
 EDFS_OBJS = edfs.c.o
 
-#LIBBASE = ../lib/libbase.a
-#LIBSERVER_OBJS = ../server/vnode.c.o ../server/datazone.c.o ../server/object.c.o 
-
-COMMON_CFLAGS = -g -fPIC -Wall -Werror -D_XOPEN_SOURCE -I../deps/ccl -I../deps/zeromq/include -I../deps/czmq/include -I../include 
-#-I../server
-
-FINAL_CFLAGS = -std=gnu11 ${COMMON_CFLAGS} 
-FINAL_CXXFLAGS = -std=c++11 ${COMMON_CFLAGS}
-
-BASE_LDFLAGS = -lccl -lbase -llmdb -leblob -leblob_react -lreact -lrocksdb -lleveldb -lsnappy -llsm-sqlite4 -lczmq -lzmq -lmsgpack -lbz2 -ljemalloc -lpthread -lssl -lcrypto -lstdc++ -lm -lz
-COMMON_LDFLAGS = -L../lib ${BASE_LDFLAGS}
-FINAL_LDFLAGS = ${COMMON_LDFLAGS} 
+LIBUTILS = ../utils/libutils.a
+#LIBSERVER_OBJS = ../server/vnode.c.o ../server/datazone.c.o ../server/object.c.o
 
 all: ${EDBROKER} ${EDWORKER} ${EDCLIENT} ${EDFS}
 
+include ../Makefile.common
+
+FINAL_CFLAGS += -I../kvdb
+FINAL_CXXFLAGS += -I../kvdb
+
+ifeq (${UNAME}, Darwin)
+	FINAL_CFLAGS += -I/opt/local/include/osxfuse
+endif
+
+
+FINAL_LDFLAGS += ../kvdb/libkvdb.a ../utils/libutils.a 
+FINAL_LDFLAGS += -lczmq -lzmq -ljemalloc
+FINAL_LDFLAGS += -llmdb -lleveldb
+FINAL_LDFLAGS += -lmsgpack -lbz2
+
+ifeq (${UNAME}, Darwin)
+	FINAL_LDFLAGS += -losxfuse -ldl
+endif
+ifeq (${UNAME}, Linux)
+	FINAL_LDFLAGS += -lfuse -ldl
+endif
+
+FINAL_LDFLAGS += -lpthread -lssl -lcrypto
+FINAL_LDFLAGS += -lstdc++ -lm -lz
+
+
 ${EDBROKER}: ${LIBBASE} ${EDBROKER_OBJS} ${EVERDATA_OBJS}
-	${CC} -static -o ${EDBROKER} ${EDBROKER_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS} 
+	${CC} -o ${EDBROKER} ${EDBROKER_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
 
 ${EDWORKER}: ${LIBBASE} ${LIBSERVER_OBJS} ${EDWORKER_OBJS} ${EVERDATA_OBJS}
-	${CC} -static -o ${EDWORKER} ${EDWORKER_OBJS} ${LIBSERVER_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS} 
+	${CC} -o ${EDWORKER} ${EDWORKER_OBJS} ${LIBSERVER_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
 
 ${EDCLIENT}: ${LIBBASE} ${EDCLIENT_OBJS} ${EVERDATA_OBJS}
-	${CC} -static -o ${EDCLIENT} ${EDCLIENT_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS} 
+	${CC} -o ${EDCLIENT} ${EDCLIENT_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
 
 ${EDFS}: edclient.c.o ${LIBBASE} ${EDFS_OBJS} ${EVERDATA_OBJS}
-	${CC} -static -o ${EDFS} ${EDFS_OBJS} edclient.c.o ${EVERDATA_OBJS} -lfuse -ldl ${FINAL_LDFLAGS}
-
-%.c.o: %.c
-	${CC} ${FINAL_CFLAGS} -o $*.c.o -c  $*.c
+	${CC} -o ${EDFS} ${EDFS_OBJS} edclient.c.o ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
 
 clean:
 	rm -f ${EVERDATA_OBJS} ${EDBROKER} ${EDBROKER_OBJS} ${EDWORKER} ${EDWORKER_OBJS} ${EDCLIENT} ${EDCLIENT_OBJS}

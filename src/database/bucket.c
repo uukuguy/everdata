@@ -2,10 +2,10 @@
  * @file   bucket.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-21 15:09:27
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include <czmq.h>
@@ -65,7 +65,6 @@ zmsg_t *bucket_get_data(bucket_t *bucket, zsock_t *sock, zframe_t *identity, zms
                     sendback_msg = create_key_data_message(key, slice->data, slice->size);
 
                     slice_free(slice);
-                    
                 } else {
                     sendback_msg = create_status_message(MSG_STATUS_WORKER_NOTFOUND);
                 } // slice != NULL
@@ -82,7 +81,7 @@ zmsg_t *bucket_get_data(bucket_t *bucket, zsock_t *sock, zframe_t *identity, zms
 
 /* ================ bucket_put_data() ================ */
 zmsg_t *bucket_put_data(bucket_t *bucket, zsock_t *sock, zframe_t *identity, zmsg_t *msg)
-{ 
+{
     bucketdb_t *bucketdb = bucket->bucketdb;
     zmsg_t *sendback_msg = NULL;
 
@@ -133,7 +132,7 @@ int bucket_handle_message(bucket_t *bucket, zsock_t *sock, zmsg_t *msg)
     zmsg_t *sendback_msg = NULL;
 
     /*sendback_msg = create_status_message(MSG_STATUS_WORKER_ACK);*/
-    if ( message_check_action(msg, MSG_ACTION_PUT) == 0 ){ 
+    if ( message_check_action(msg, MSG_ACTION_PUT) == 0 ){
         sendback_msg = bucket_put_data(bucket, sock, identity, msg);
     } else if (message_check_action(msg, MSG_ACTION_GET) == 0 ) {
         sendback_msg = bucket_get_data(bucket, sock, identity, msg);

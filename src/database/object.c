@@ -2,10 +2,10 @@
  * @file   object.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-28 20:53:03
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include "object.h"
@@ -14,7 +14,7 @@
 #include "logger.h"
 #include "cboost.h"
 
-/* ==================== slice_new() ==================== */ 
+/* ==================== slice_new() ==================== */
 slice_t *slice_new(md5_value_t key_md5, uint32_t slice_idx, const char *data, uint32_t data_size)
 {
     slice_t *slice = (slice_t*)zmalloc(sizeof(slice_t));
@@ -31,7 +31,7 @@ slice_t *slice_new(md5_value_t key_md5, uint32_t slice_idx, const char *data, ui
     return slice;
 }
 
-/* ==================== slice_free() ==================== */ 
+/* ==================== slice_free() ==================== */
 void slice_free(slice_t *slice)
 {
     if ( slice != NULL ){
@@ -54,7 +54,7 @@ void slice_attach_data(slice_t *slice, char *data, uint32_t data_size)
     slice->size = data_size;
 }
 
-/* ==================== slice_write_to_kvdb() ==================== */ 
+/* ==================== slice_write_to_kvdb() ==================== */
 int slice_write_to_kvdb(kvdb_t *kvdb, slice_t *slice)
 {
     uint32_t slice_idx = slice->slice_key.slice_idx;
@@ -71,7 +71,7 @@ int slice_write_to_kvdb(kvdb_t *kvdb, slice_t *slice)
     }
 }
 
-/* ==================== slice_read_from_kvdb() ==================== */ 
+/* ==================== slice_read_from_kvdb() ==================== */
 slice_t *slice_read_from_kvdb(kvdb_t *kvdb, md5_value_t key_md5, uint32_t slice_idx)
 {
     slice_t *slice = NULL;
@@ -93,7 +93,7 @@ slice_t *slice_read_from_kvdb(kvdb_t *kvdb, md5_value_t key_md5, uint32_t slice_
     return slice;
 }
 
-/* ==================== slice_delete_from_kvdb() ==================== */ 
+/* ==================== slice_delete_from_kvdb() ==================== */
 int slice_delete_from_kvdb(kvdb_t *kvdb, md5_value_t key_md5, uint32_t slice_idx)
 {
     slice_key_t slice_key;
@@ -113,7 +113,7 @@ int slice_delete_from_kvdb(kvdb_t *kvdb, md5_value_t key_md5, uint32_t slice_idx
     return ret;
 }
 
-/* ==================== object_new() ==================== */ 
+/* ==================== object_new() ==================== */
 object_t *object_new(const char *key, uint32_t keylen)
 {
     object_t *object = (object_t*)zmalloc(sizeof(object_t));
@@ -132,7 +132,7 @@ object_t *object_new(const char *key, uint32_t keylen)
 }
 
 
-/* ==================== object_free() ==================== */ 
+/* ==================== object_free() ==================== */
 void object_free(object_t *object)
 {
     if ( object->key != NULL ){

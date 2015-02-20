@@ -2,10 +2,10 @@
  * @file   bucketdb.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-28 17:27:07
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include "bucketdb.h"
@@ -213,7 +213,7 @@ int bucketdb_get_metadata(bucketdb_t *bucketdb, const char *key, char **data, ui
 }
 
 
-/* ==================== bucketdb_write_to_file() ==================== */ 
+/* ==================== bucketdb_write_to_file() ==================== */
 int bucketdb_write_to_file(bucketdb_t *bucketdb, object_t *object)
 {
     /*int logFile = bucketdb->logFile;*/
@@ -229,7 +229,7 @@ int bucketdb_write_to_file(bucketdb_t *bucketdb, object_t *object)
     return 0;
 }
 
-/* ==================== bucketdb_write_to_kvdb() ==================== */ 
+/* ==================== bucketdb_write_to_kvdb() ==================== */
 int bucketdb_write_to_kvdb(bucketdb_t *bucketdb, object_t *object)
 {
     /*object_put_into_kvdb(bucketdb->active_slicedb->kvdb, object);*/
@@ -242,7 +242,7 @@ typedef struct slice_metadata_t{
     uint32_t slicedb_id;
 } slice_metadata_t;
 
-/* ==================== bucketdb_get_slicedb_id() ==================== */ 
+/* ==================== bucketdb_get_slicedb_id() ==================== */
 int bucketdb_get_slicedb_id(bucketdb_t *bucketdb, slice_key_t *slice_key, uint32_t *p_slicedb_id)
 {
     int ret = 0;
@@ -253,13 +253,13 @@ int bucketdb_get_slicedb_id(bucketdb_t *bucketdb, slice_key_t *slice_key, uint32
         if ( slice_metadata != NULL && value_len == sizeof(slice_metadata_t) ){
             *p_slicedb_id = slice_metadata->slicedb_id;
             ret = 1;
-        } 
+        }
     }
 
     return ret;
 }
 
-/* ==================== bucketdb_write_to_storage() ==================== */ 
+/* ==================== bucketdb_write_to_storage() ==================== */
 int bucketdb_write_to_storage(bucketdb_t *bucketdb, slice_t *slice)
 {
     int ret = 0;
@@ -296,7 +296,7 @@ int bucketdb_write_to_storage(bucketdb_t *bucketdb, slice_t *slice)
         memset(&slice_metadata, 0, sizeof(slice_metadata_t));
         slice_metadata.version = 0;
         slice_metadata.slicedb_id = active_slicedb->id;
-        ret = kvdb_put(bucketdb->kvdb_metadata, (const char *)&slice->slice_key, sizeof(slice_key_t), (void*)&slice_metadata, sizeof(slice_metadata_t)); 
+        ret = kvdb_put(bucketdb->kvdb_metadata, (const char *)&slice->slice_key, sizeof(slice_key_t), (void*)&slice_metadata, sizeof(slice_metadata_t));
         if ( ret == 0 ){
             ret = slice_write_to_kvdb(active_slicedb->kvdb, slice);
         } else {
@@ -313,15 +313,14 @@ int bucketdb_write_to_storage(bucketdb_t *bucketdb, slice_t *slice)
     return ret;
 }
 
-/* ==================== bucketdb_read_from_storage() ==================== */ 
+/* ==================== bucketdb_read_from_storage() ==================== */
 slice_t *bucketdb_read_from_storage(bucketdb_t *bucketdb, md5_value_t key_md5, uint32_t slice_idx)
 {
     slice_key_t slice_key;
     slice_key.key_md5 = key_md5;
     slice_key.slice_idx = slice_idx;
-
     slice_t *slice = NULL;
-    
+
     if ( bucketdb->storage_type >= BUCKETDB_KVDB ){
 
         uint32_t active_slicedb_id = bucketdb->active_slicedb->id;
@@ -332,12 +331,12 @@ slice_t *bucketdb_read_from_storage(bucketdb_t *bucketdb, md5_value_t key_md5, u
             slice = slice_read_from_kvdb(bucketdb->slicedbs[slicedb_id]->kvdb, key_md5, slice_idx);
         }
     } else if ( bucketdb->storage_type == BUCKETDB_LOGFILE ){
-    } 
+    }
 
     return slice;
 }
 
-/* ==================== bucketdb_delete_from_storage() ==================== */ 
+/* ==================== bucketdb_delete_from_storage() ==================== */
 int bucketdb_delete_from_storage(bucketdb_t *bucketdb, md5_value_t key_md5, uint32_t slice_idx)
 {
     int rc = -1;
@@ -355,7 +354,7 @@ int bucketdb_delete_from_storage(bucketdb_t *bucketdb, md5_value_t key_md5, uint
             rc = slice_delete_from_kvdb(bucketdb->slicedbs[slicedb_id]->kvdb, key_md5, slice_idx);
         }
     } else if ( bucketdb->storage_type == BUCKETDB_LOGFILE ){
-    } 
+    }
 
     return rc;
 }

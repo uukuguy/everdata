@@ -2,10 +2,10 @@
  * @file   main.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-08 01:23:17
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include "common.h"
@@ -45,7 +45,7 @@ static const char *short_options = "e:u:w:c:s:dvth";
 
 extern int run_edworker(const char *broker_endpoint, uint32_t total_containers, uint32_t total_buckets, uint32_t total_channels, int storage_type, int verbose);
 
-/* ==================== daemon_loop() ==================== */ 
+/* ==================== daemon_loop() ==================== */
 int daemon_loop(void *data)
 {
     notice_log("In daemon_loop()");
@@ -54,7 +54,7 @@ int daemon_loop(void *data)
     return run_edworker(po->broker_endpoint, po->total_containers, po->total_buckets, po->total_channels, po->storage_type, po->log_level >= LOG_DEBUG ? 1 : 0);
 }
 
-/* ==================== usage() ==================== */ 
+/* ==================== usage() ==================== */
 static void usage(int status)
 {
     if ( status )
@@ -76,7 +76,7 @@ static void usage(int status)
     }
     exit(status);
 }
- 
+
 int main(int argc, char *argv[])
 {
     program_options_t po;
@@ -99,21 +99,33 @@ int main(int argc, char *argv[])
                 po.broker_endpoint = optarg;
                 break;
             case 'u':
-                po.total_containers = atoi(optarg);
-                if ( po.total_containers < 0 ) {
-                    po.total_containers = 1;
+                {
+                    int total_containers = atoi(optarg);
+                    if ( total_containers < 0 ) {
+                        po.total_containers = 1;
+                    } else {
+                        po.total_containers = total_containers;
+                    }
                 }
                 break;
             case 'w':
-                po.total_buckets = atoi(optarg);
-                if ( po.total_buckets < 0 ) {
-                    po.total_buckets = 1;
+                {
+                    int total_buckets = atoi(optarg);
+                    if ( total_buckets < 0 ) {
+                        po.total_buckets = 1;
+                    } else {
+                        po.total_buckets = total_buckets;
+                    }
                 }
                 break;
             case 'c':
-                po.total_channels = atoi(optarg);
-                if ( po.total_channels < 0 ) {
-                    po.total_channels = 1;
+                {
+                    int total_channels = atoi(optarg);
+                    if ( total_channels < 0 ) {
+                        po.total_channels = total_channels;
+                    } else {
+                        po.total_channels = total_channels;
+                    }
                 }
                 break;
             case 's':
@@ -168,8 +180,8 @@ int main(int argc, char *argv[])
         return -1;
 
     if ( po.is_daemon ){
-        return daemon_fork(daemon_loop, (void*)&po); 
-    } else 
+        return daemon_fork(daemon_loop, (void*)&po);
+    } else
         return run_edworker(po.broker_endpoint, po.total_containers, po.total_buckets, po.total_channels, po.storage_type, po.log_level >= LOG_DEBUG ? 1 : 0);
 }
 

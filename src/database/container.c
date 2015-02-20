@@ -2,10 +2,10 @@
  * @file   container.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-21 15:25:18
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include <czmq.h>
@@ -55,7 +55,14 @@ container_t *container_new(datanode_t *datanode, uint32_t container_id)
     container->total_buckets = datanode->total_buckets;
     container->total_channels = datanode->total_channels;
 
-    const char *storage_dir = "./data/storage";
+    const char *data_dir = "./data";
+    if ( mkdir_if_not_exist(data_dir) != 0 ){
+        error_log("mkdir %s failed.", data_dir);
+        abort();
+    }
+
+    char storage_dir[255];
+    sprintf(storage_dir, "%s/storage", data_dir);
     if ( mkdir_if_not_exist(storage_dir) != 0 ){
         error_log("mkdir %s failed.", storage_dir);
         abort();
@@ -66,7 +73,6 @@ container_t *container_new(datanode_t *datanode, uint32_t container_id)
         error_log("mkdir %s failed.", container->data_dir);
         abort();
     }
-
 
     container->heartbeat_at = zclock_time() + HEARTBEAT_INTERVAL;
 

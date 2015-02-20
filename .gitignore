@@ -1,4 +1,7 @@
 bin/
+data/
+corpus/
+
 redsvd
 redsvd*/
 libmmseg
@@ -6,6 +9,13 @@ libmmseg*/
 svdlibc
 svdlibc*/
 
+# deps
+czmq
+czmq*/
+zeromq
+zeromq*/
+jemalloc
+jemalloc*/
 
 # Compiled Object files
 *.slo

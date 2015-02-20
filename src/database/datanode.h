@@ -2,10 +2,10 @@
  * @file   datanode.h
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-23 20:46:15
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #ifndef __DATANODE_H__
@@ -21,16 +21,19 @@ extern "C" {
 typedef struct datanode_t{
     ZPIPE;
 
-    uint32_t total_containers;
+    uint32_t id;
+    //uint32_t total_containers;
     uint32_t total_buckets;
     uint32_t total_channels;
     int storage_type;
+    char data_dir[NAME_MAX];
     const char *broker_endpoint;
     int verbose;
 
 } datanode_t;
 
-datanode_t *datanode_new(uint32_t total_containers, uint32_t total_buckets, uint32_t total_channels, int storage_type, const char *broker_endpoint, int verbose);
+//datanode_t *datanode_new(uint32_t total_containers, uint32_t total_buckets, uint32_t total_channels, int storage_type, const char *broker_endpoint, int verbose);
+datanode_t *datanode_new(uint32_t total_buckets, uint32_t total_channels, int storage_type, const char *broker_endpoint, int verbose);
 void datanode_free(datanode_t *datanode);
 void datanode_loop(datanode_t *datanode);
 

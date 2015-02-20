@@ -2,10 +2,10 @@
  * @file   bucket.h
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-21 15:14:41
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #ifndef __BUCKET_H__
@@ -19,7 +19,8 @@ extern "C" {
 #include "zpipe.h"
 
 typedef struct _zactor_t zactor_t;
-typedef struct container_t container_t;
+/*typedef struct container_t container_t;*/
+typedef struct datanode_t datanode_t;
 typedef struct vnode_t vnode_t;
 typedef struct channel_t channel_t;
 typedef struct bucketdb_t bucketdb_t;
@@ -31,7 +32,8 @@ typedef struct bucket_t {
     ZPIPE;
 
     uint32_t id;
-    container_t *container;
+/*    container_t *container; */
+    datanode_t *datanode;
 
     uint32_t total_channels;
     const char *broker_endpoint;
@@ -44,7 +46,8 @@ typedef struct bucket_t {
 
 } bucket_t;
 
-bucket_t *bucket_new(container_t *container, uint32_t bucket_id);
+/*bucket_t *bucket_new(container_t *container, uint32_t bucket_id);*/
+bucket_t *bucket_new(datanode_t *datanode, uint32_t bucket_id);
 void bucket_free(bucket_t *bucket);
 int bucket_handle_message(bucket_t *bucket, zsock_t *sock, zmsg_t *msg);
 

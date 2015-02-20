@@ -5,7 +5,8 @@ EDBROKER = ../../bin/edbroker
 EDBROKER_OBJS = edbroker_main.c.o edbroker.c.o
 
 EDWORKER = ../../bin/edworker
-EDWORKER_OBJS = edworker_main.c.o edworker.c.o datanode.c.o container.c.o bucket.c.o channel.c.o object.c.o bucketdb.c.o
+EDWORKER_OBJS = edworker_main.c.o edworker.c.o datanode.c.o bucket.c.o channel.c.o object.c.o bucketdb.c.o
+#container.c.o 
 EDCLIENT = ../../bin/edclient
 EDCLIENT_OBJS = edclient_main.c.o edclient.c.o
 

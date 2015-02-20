@@ -2,10 +2,10 @@
  * @file   edworker.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-08 03:51:23
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include <czmq.h>
@@ -38,11 +38,13 @@ const char *get_storage_type_name(int storage_type)
 }
 
 /* ================ run_edworker_for_container() ================ */
-int run_edworker(const char *broker_endpoint, uint32_t total_containers, uint32_t total_buckets, uint32_t total_channels, int storage_type, int verbose)
+/*int run_edworker(const char *broker_endpoint, uint32_t total_containers, uint32_t total_buckets, uint32_t total_channels, int storage_type, int verbose)*/
+int run_edworker(const char *broker_endpoint, uint32_t total_buckets, uint32_t total_channels, int storage_type, int verbose)
 {
-    info_log("run_edworker() with %d containers %d buckets %d channels connect to %s. Storage Type(%d):%s", total_containers, total_buckets, total_channels, broker_endpoint, storage_type, get_storage_type_name(storage_type));
+    info_log("run_edworker() with %d buckets %d channels connect to %s. Storage Type(%d):%s", total_buckets, total_channels, broker_endpoint, storage_type, get_storage_type_name(storage_type));
 
-    datanode_t *datanode = datanode_new(total_containers, total_buckets, total_channels, storage_type, broker_endpoint, verbose);
+    /*datanode_t *datanode = datanode_new(total_containers, total_buckets, total_channels, storage_type, broker_endpoint, verbose);*/
+    datanode_t *datanode = datanode_new(total_buckets, total_channels, storage_type, broker_endpoint, verbose);
 
     datanode_loop(datanode);
 

@@ -19,7 +19,6 @@ static char program_name[] = "edworker";
 
 typedef struct{
     const char *broker_endpoint;
-    /*uint32_t total_containers;*/
     uint32_t total_buckets;
     uint32_t total_channels;
     int storage_type;
@@ -30,7 +29,6 @@ typedef struct{
 
 static struct option const long_options[] = {
 	{"endpoint", required_argument, NULL, 'e'},
-	{"containers", required_argument, NULL, 'u'},
 	{"buckets", required_argument, NULL, 'w'},
 	{"channels", required_argument, NULL, 'c'},
 	{"storage", required_argument, NULL, 's'},
@@ -43,7 +41,6 @@ static struct option const long_options[] = {
 };
 static const char *short_options = "e:u:w:c:s:dvth";
 
-/*extern int run_edworker(const char *broker_endpoint, uint32_t total_containers, uint32_t total_buckets, uint32_t total_channels, int storage_type, int verbose);*/
 extern int run_edworker(const char *broker_endpoint, uint32_t total_buckets, uint32_t total_channels, int storage_type, int verbose);
 
 /* ==================== daemon_loop() ==================== */
@@ -52,7 +49,6 @@ int daemon_loop(void *data)
     notice_log("In daemon_loop()");
 
     const program_options_t *po = (const program_options_t *)data;
-    /*return run_edworker(po->broker_endpoint, po->total_containers, po->total_buckets, po->total_channels, po->storage_type, po->log_level >= LOG_DEBUG ? 1 : 0);*/
     return run_edworker(po->broker_endpoint, po->total_buckets, po->total_channels, po->storage_type, po->log_level >= LOG_DEBUG ? 1 : 0);
 }
 
@@ -66,7 +62,6 @@ static void usage(int status)
         printf("Usage: %s [OPTION] [PATH]\n", program_name);
         printf("Everdata Worker\n\
                 -e, --endpoint          specify the edbroker endpoint\n\
-                -u, --containers           count of containers\n\
                 -w, --buckets           count of buckets\n\
                 -w, --channels           count of channels\n\
                 -s, --storage      NONE, LOGFILE, LMDB, EBLOB, LEVELDB, ROCKSDB, LSM\n\
@@ -85,7 +80,6 @@ int main(int argc, char *argv[])
     memset(&po, 0, sizeof(program_options_t));
 
     po.broker_endpoint = "tcp://127.0.0.1:19978";
-    /*po.total_containers = 1;*/
     po.total_buckets = 4;
     po.total_channels = 2;
     po.storage_type = BUCKETDB_NONE;
@@ -100,16 +94,6 @@ int main(int argc, char *argv[])
             case 'e':
                 po.broker_endpoint = optarg;
                 break;
-            /*case 'u':*/
-                /*{*/
-                    /*int total_containers = atoi(optarg);*/
-                    /*if ( total_containers < 0 ) {*/
-                        /*po.total_containers = 1;*/
-                    /*} else {*/
-                        /*po.total_containers = total_containers;*/
-                    /*}*/
-                /*}*/
-                /*break;*/
             case 'w':
                 {
                     int total_buckets = atoi(optarg);
@@ -184,7 +168,6 @@ int main(int argc, char *argv[])
     if ( po.is_daemon ){
         return daemon_fork(daemon_loop, (void*)&po);
     } else
-        /*return run_edworker(po.broker_endpoint, po.total_containers, po.total_buckets, po.total_channels, po.storage_type, po.log_level >= LOG_DEBUG ? 1 : 0);*/
         return run_edworker(po.broker_endpoint, po.total_buckets, po.total_channels, po.storage_type, po.log_level >= LOG_DEBUG ? 1 : 0);
 }
 

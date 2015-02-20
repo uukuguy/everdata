@@ -15,7 +15,6 @@
 #include "md5.h"
 #include "everdata.h"
 
-/*#include "container.h"*/
 #include "datanode.h"
 #include "bucket.h"
 #include "channel.h"
@@ -155,8 +154,6 @@ int bucket_handle_message(bucket_t *bucket, zsock_t *sock, zmsg_t *msg)
 void bucket_thread_main(zsock_t *pipe, void *user_data)
 {
     bucket_t *bucket = (bucket_t*)user_data;
-    /*container_t *container = bucket->container;*/
-    /*datanode_t *datanode = bucket->datanode;*/
 
     trace_log("Bucket %d Ready.", bucket->id);
 
@@ -174,12 +171,10 @@ void bucket_thread_main(zsock_t *pipe, void *user_data)
 
     ZPIPE_ACTOR_THREAD_END(pipe);
 
-    /*trace_log("Bucket(%d) Container(%d) Exit.", bucket->id, container->id);*/
     trace_log("Bucket(%d) Exit.", bucket->id);
 }
 
 /* ================ bucket_new() ================ */
-/*bucket_t *bucket_new(container_t *container, uint32_t bucket_id)*/
 bucket_t *bucket_new(datanode_t *datanode, uint32_t bucket_id)
 {
     bucket_t *bucket = (bucket_t*)malloc(sizeof(bucket_t));
@@ -192,14 +187,7 @@ bucket_t *bucket_new(datanode_t *datanode, uint32_t bucket_id)
     bucket->broker_endpoint = datanode->broker_endpoint;
     bucket->verbose = datanode->verbose;
 
-    /*bucket->container = container;*/
-    /*bucket->total_channels = container->total_channels;*/
-    /*bucket->storage_type = container->storage_type;*/
-    /*bucket->broker_endpoint = container->broker_endpoint;*/
-    /*bucket->verbose = container->verbose;*/
-
     /* -------- bucket->bucketdb -------- */
-    /*bucket->bucketdb = bucketdb_new(container->data_dir, bucket_id, bucket->storage_type);*/
     bucket->bucketdb = bucketdb_new(datanode->data_dir, bucket_id, bucket->storage_type);
 
     bucket->heartbeat_at = zclock_time() + HEARTBEAT_INTERVAL;

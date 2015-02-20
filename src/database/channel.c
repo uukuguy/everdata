@@ -13,7 +13,6 @@
 #include "logger.h"
 #include "everdata.h"
 
-/*#include "container.h"*/
 #include "datanode.h"
 #include "bucket.h"
 #include "channel.h"
@@ -23,20 +22,17 @@ zsock_t *channel_connect_to_broker(channel_t *channel)
 {
     notice_log("channel_connect_to_broker");
     bucket_t *bucket = channel->bucket;
-    /*container_t *container = bucket->container;*/
     datanode_t *datanode = bucket->datanode;
 
     zsock_t *broker_sock = zsock_new_dealer(channel->broker_endpoint);
 
     if ( broker_sock != NULL ){
         zmsg_t *msg_worker_ready = create_status_message(MSG_STATUS_WORKER_READY);
-        /*zmsg_addmem(msg_worker_ready, &channel->bucket->container->id, sizeof(uint32_t));*/
         zmsg_addmem(msg_worker_ready, &channel->bucket->datanode->id, sizeof(uint32_t));
         zmsg_addmem(msg_worker_ready, &channel->bucket->id, sizeof(uint32_t));
         zmsg_addmem(msg_worker_ready, &channel->id, sizeof(uint32_t));
         zmsg_send(&msg_worker_ready, broker_sock);
     } else {
-        /*warning_log("Channel(%d) int bucket(%d) container(%d) connect to broker failed. endpoint:%s", channel->id, bucket->id, container->id, channel->broker_endpoint);*/
         warning_log("Channel(%d) int bucket(%d) datanode(%d) connect to broker failed. endpoint:%s", channel->id, bucket->id, datanode->id, channel->broker_endpoint);
     }
 
@@ -49,10 +45,8 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
     channel_t *channel = (channel_t*)user_data;
 
     bucket_t *bucket = channel->bucket;
-    /*container_t *container = bucket->container;*/
     datanode_t *datanode = bucket->datanode;
 
-    /*trace_log("Channel %d in bucket(%d) container(%d) Ready.", channel->id, bucket->id, container->id);*/
     trace_log("Channel %d in bucket(%d) datanode(%d) Ready.", channel->id, bucket->id, datanode->id);
 
     zsock_signal(pipe, 0);
@@ -70,7 +64,6 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
         zsock_t *sock = zpoller_wait(poller, HEARTBEAT_INTERVAL);
 
         if ( zclock_time() > channel->heartbeat_at ){
-            /*trace_log("--> Channel(%d) Bucket(%d) Container(%d) Send worker heartbeat.", channel->id, bucket->id, container->id);*/
             trace_log("--> Channel(%d) Bucket(%d) Datanode(%d) Send worker heartbeat.", channel->id, bucket->id, datanode->id);
             channel->heartbeat_at = zclock_time() + HEARTBEAT_INTERVAL;
 
@@ -85,7 +78,6 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
             /*zmsg_print(msg);*/
 
             if ( message_check_heartbeat(msg, MSG_HEARTBEAT_BROKER) == 0 ){
-            /*trace_log("<-- Channel(%d) Bucket(%d) Container(%d) Receive broker heartbeat.", channel->id, bucket->id, container->id);*/
             trace_log("<-- Channel(%d) Bucket(%d) Datanode(%d) Receive broker heartbeat.", channel->id, bucket->id, datanode->id);
                 liveness = HEARTBEAT_LIVENESS;
                 zmsg_destroy(&msg);
@@ -99,7 +91,6 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
                     interval *= 2;
                 }
 
-                /*warning_log("Channel(%d) Bucket(%d) Container(%d) timeout. Try reconnect...", channel->id, bucket->id, container->id);*/
                 warning_log("Channel(%d) Bucket(%d) Datanode(%d) timeout. Try reconnect...", channel->id, bucket->id, datanode->id);
                 zsock_destroy(&broker_sock);
 
@@ -118,7 +109,6 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
 
     zsock_destroy(&broker_sock);
 
-    /*trace_log("Channel(%d) Bucket(%d) Container(%d) Exit.", channel->id, channel->bucket->id, channel->bucket->container->id);*/
     trace_log("Channel(%d) Bucket(%d) Datanode(%d) Exit.", channel->id, channel->bucket->id, channel->bucket->datanode->id);
 
 }

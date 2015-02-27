@@ -11,6 +11,8 @@ OBJS = logger.c.o \
 	   md5.c.o \
 	   crc32.c.o \
 	   zmalloc.c.o \
+	   message.c.o \
+	   zpipe.c.o \
 	   cboost.cc.o
 
 include ../Makefile.common

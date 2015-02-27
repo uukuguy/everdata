@@ -330,6 +330,8 @@ slice_t *bucketdb_read_from_storage(bucketdb_t *bucketdb, md5_value_t key_md5, u
         if ( old_slice ){
             slice = slice_read_from_kvdb(bucketdb->slicedbs[slicedb_id]->kvdb, key_md5, slice_idx);
         }
+    } else if (bucketdb->storage_type == BUCKETDB_NONE ){
+        slice = slice_new(key_md5, slice_idx, NULL, 0);
     } else if ( bucketdb->storage_type == BUCKETDB_LOGFILE ){
     }
 

@@ -2,10 +2,10 @@
  * @file   zpipe.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-22 00:41:29
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #ifndef __ZPIPE_H__
@@ -28,13 +28,19 @@ typedef struct zpipe_actor_t{
     zpipe_t *zpipe;
 } zpipe_actor_t;
 
+typedef struct zpipe_actor_args_t {
+    zactor_fn *thread_main;
+    void *user_data;
+} zpipe_actor_args_t;
+
 zpipe_t *zpipe_new(uint32_t total_actors);
 void zpipe_init(zpipe_t *zpipe, uint32_t total_actors);
 void zpipe_free(zpipe_t *zpipe);
 int zpipe_loop(zpipe_t *zpipe);
 
-void zpipe_actor_thread_begin(zsock_t *pipe);
-void zpipe_actor_thread_end(zsock_t *pipe);
+void zpipe_actor_root_thread_main(zsock_t *pipe, void *user_data);
+//void zpipe_actor_thread_begin(zsock_t *pipe);
+//void zpipe_actor_thread_end(zsock_t *pipe);
 
 #define ZPIPE \
         zpipe_t *zpipe; \
@@ -65,18 +71,23 @@ void zpipe_actor_thread_end(zsock_t *pipe);
         zpipe_actor_t zpipe_actor;
 
 #define ZPIPE_ACTOR_NEW(slave, slave_thread_main) \
-        slave->zpipe_actor.actor = zactor_new(slave_thread_main, slave);
+        { \
+        zpipe_actor_args_t _actor_args = {slave_thread_main, slave}; \
+        slave->zpipe_actor.actor = zactor_new(zpipe_actor_root_thread_main, (void*)&_actor_args); \
+        }
+
+        //slave->zpipe_actor.actor = zactor_new(slave_thread_main, slave);
 
 #define ZPIPE_ACTOR_FREE(slave) \
     zactor_destroy(&slave->zpipe_actor.actor); \
     slave->zpipe_actor.actor = NULL;
 
 
-#define ZPIPE_ACTOR_THREAD_BEGIN(pipe) \
-        zpipe_actor_thread_begin(pipe);
+//#define ZPIPE_ACTOR_THREAD_BEGIN(pipe) \
+        //zpipe_actor_thread_begin(pipe);
 
-#define ZPIPE_ACTOR_THREAD_END(pipe) \
-        zpipe_actor_thread_end(pipe);
+//#define ZPIPE_ACTOR_THREAD_END(pipe) \
+        //zpipe_actor_thread_end(pipe);
 
 #endif // __ZPIPE_H__
 

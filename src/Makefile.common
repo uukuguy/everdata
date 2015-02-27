@@ -3,7 +3,7 @@ CFLAGS_JEMALLOC=-DUSE_JEMALLOC -DHAVE_ATOMIC
 
 COMMON_CFLAGS= -g -fPIC -Wall -Wno-deprecated -Wno-unused-result 
 COMMON_CFLAGS += ${CFLAGS_JEMALLOC}
-COMMON_CFLAGS += -I../utils -I../../utils
+COMMON_CFLAGS += -I../utils -I../../utils -I../kvdb -I../../kvdb
 
 UNAME := $(shell uname)
 ifeq (${UNAME}, Linux)

@@ -16,6 +16,7 @@
 #include "everdata.h"
 
 #include "cboost.h"
+/*#include "crush.hpp"*/
 
 /* -------- struct worker_t -------- */
 typedef struct worker_t {
@@ -197,9 +198,10 @@ worker_t *broker_set_worker_ready(broker_t *broker, zframe_t *worker_identity)
         /*notice_log("worker(%s) ready. expiry:%zu", worker->id_string, worker->expiry - now);*/
     } else {
         g_stringmap_insert(backends, worker->id_string, worker);
+        refresh_select_backends(broker);
     }
 
-    refresh_select_backends(broker);
+    /*refresh_select_backends(broker);*/
 
     broker_unlock_workers(broker);
 

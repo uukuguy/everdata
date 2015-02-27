@@ -49,9 +49,6 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
 
     trace_log("Channel %d in bucket(%d) datanode(%d) Ready.", channel->id, bucket->id, datanode->id);
 
-    zsock_signal(pipe, 0);
-    message_send_status(pipe, MSG_STATUS_ACTOR_READY);
-
     zsock_t *broker_sock = channel_connect_to_broker(channel);
     if ( broker_sock == NULL ){
     }
@@ -104,8 +101,6 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
 
     }
     zpoller_destroy(&poller);
-
-    message_send_status(pipe, MSG_STATUS_ACTOR_OVER);
 
     zsock_destroy(&broker_sock);
 

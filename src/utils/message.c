@@ -1,15 +1,15 @@
 /**
- * @file   everdata.c
+ * @file   message.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-10 14:58:16
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include <czmq.h>
-#include "everdata.h"
+#include "message.h"
 
 void message_add_status(zmsg_t *msg, const char *status)
 {
@@ -91,13 +91,9 @@ zmsg_t *create_data_message(const char *data, uint32_t data_size)
 
 int __message_send_data(zsock_t *sock, int16_t msgtype, const char *data, uint32_t data_size)
 {
-    /*zmsg_t *msg = zmsg_new();*/
-
-    /*zmsg_addmem(msg, &msgtype, sizeof(int16_t));*/
-    /*zmsg_addmem(msg, data, data_size);*/
     zmsg_t *msg = create_base_message(msgtype);
     zmsg_addmem(msg, data, data_size);
-    
+
     int rc = zmsg_send(&msg, sock);
 
     return rc;
@@ -105,11 +101,6 @@ int __message_send_data(zsock_t *sock, int16_t msgtype, const char *data, uint32
 
 int __message_send_str(zsock_t *sock, int16_t msgtype, const char *data)
 {
-    /*zmsg_t *msg = zmsg_new();*/
-
-    /*zmsg_addmem(msg, &msgtype, sizeof(int16_t));*/
-    /*zmsg_addstr(msg, data);*/
-    
     zmsg_t *msg = create_base_message(msgtype);
     zmsg_addstr(msg, data);
 
@@ -142,47 +133,36 @@ int16_t message_get_msgtype(zmsg_t *msg){
     zframe_t *frame_msgtype = zmsg_first(msg);
     if ( frame_msgtype != NULL && zframe_size(frame_msgtype) == sizeof(int16_t) ){
         return *(int16_t*)zframe_data(frame_msgtype);
-    } 
+    }
 
     return MSGTYPE_UNKNOWN;
 }
 
-int message_check_status(zmsg_t *msg, const char *status)
+int message_check_msgid(zmsg_t *msg, int16_t the_msgtype, const char *id)
 {
     int16_t msgtype = message_get_msgtype(msg);
-    if ( msgtype == MSGTYPE_STATUS ){
+    if ( msgtype == the_msgtype ){
         zmsg_first(msg);
         zframe_t *frame = zmsg_next(msg);
         if ( frame != NULL ){
-            return memcmp(zframe_data(frame), status, strlen(status));
+            return memcmp(zframe_data(frame), id, strlen(id));
         }
     }
     return -1;
+}
+
+int message_check_status(zmsg_t *msg, const char *status)
+{
+    return message_check_msgid(msg, MSGTYPE_STATUS, status);
 }
 
 int message_check_heartbeat(zmsg_t *msg, const char *heartbeat)
 {
-    int16_t msgtype = message_get_msgtype(msg);
-    if ( msgtype == MSGTYPE_HEARTBEAT ){
-        zmsg_first(msg);
-        zframe_t *frame = zmsg_next(msg);
-        if ( frame != NULL ){
-            return memcmp(zframe_data(frame), heartbeat, strlen(heartbeat));
-        }
-    }
-    return -1;
+    return message_check_msgid(msg, MSGTYPE_HEARTBEAT, heartbeat);
 }
 
 int message_check_action(zmsg_t *msg, const char *action)
 {
-    int16_t msgtype = message_get_msgtype(msg);
-    if ( msgtype == MSGTYPE_ACTION ){
-        zmsg_first(msg);
-        zframe_t *frame = zmsg_next(msg);
-        if ( frame != NULL ){
-            return memcmp(zframe_data(frame), action, strlen(action));
-        }
-    }
-    return -1;
+    return message_check_msgid(msg, MSGTYPE_ACTION, action);
 }
 

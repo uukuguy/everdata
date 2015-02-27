@@ -12,7 +12,6 @@
 #include "zmalloc.h"
 #include "kvdb.h"
 #include "logger.h"
-#include "cboost.h"
 
 /* ==================== slice_new() ==================== */
 slice_t *slice_new(md5_value_t key_md5, uint32_t slice_idx, const char *data, uint32_t data_size)
@@ -113,6 +112,42 @@ int slice_delete_from_kvdb(kvdb_t *kvdb, md5_value_t key_md5, uint32_t slice_idx
     return ret;
 }
 
+/*static void _slice_init(const void *cpv_input, void *pv_output)*/
+/*{*/
+    /*memset(cpv_input, 0, sizeof(slice_t));*/
+    /**(bool_t*)pv_output = true;*/
+/*}*/
+
+/*static void _slice_destroy(const void *cpv_input, void *pv_output)*/
+/*{*/
+    /**(bool_t*)pv_output = true;*/
+/*}*/
+
+/*static void _slice_copy(const void *cpv_first, const void *cpv_second, void *pv_output)*/
+/*{*/
+    /*slice_t *slice_first = (slice_t*)cpv_first;*/
+    /*slice_t *slice_second = (slice_t*)cpv_second;*/
+    /*memcpy(slice_second, slice_first, sizeof(slice_t));*/
+    /**(bool_t*)pv_output = true;*/
+/*}*/
+
+/*static void _slice_less(const void *cpv_first, const void *cpv_second, void *pv_output)*/
+/*{*/
+    /*slice_t *slice_first = (slice_t*)cpv_first;*/
+    /*slice_t *slice_second = (slice_t*)cpv_second;*/
+    /*uint32_t idx_first = slice_first->slice_key.slice_idx;*/
+    /*uint32_t idx_second = slice_second->slice_key.slice_idx;*/
+    /**(bool_t*)pv_output = idx_first < idx_second ? true : false;*/
+/*}*/
+
+/*void slice_constructor( void )*/
+	/*__attribute__ ((no_instrument_function, constructor));*/
+
+/*void slice_constructor(void)*/
+/*{*/
+    /*type_register(slice_t, _user_init, _user_copy, _user_less, _user_destroy);*/
+/*}*/
+
 /* ==================== object_new() ==================== */
 object_t *object_new(const char *key, uint32_t keylen)
 {
@@ -128,6 +163,7 @@ object_t *object_new(const char *key, uint32_t keylen)
     }
 
     object->slices = g_list_new();
+
     return object;
 }
 
@@ -139,8 +175,8 @@ void object_free(object_t *object)
         zfree(object->key);
         object->key = NULL;
     }
-    if ( object->slices != NULL ) {
 
+    if ( object->slices != NULL ) {
         g_list_t *slices = object->slices;
         g_iterator_t *it = g_list_begin(slices);
         g_iterator_t *itend = g_list_end(slices);

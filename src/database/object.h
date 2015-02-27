@@ -2,10 +2,10 @@
  * @file   object.h
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-28 20:51:28
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #ifndef __OBJECT_H__

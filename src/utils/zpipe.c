@@ -2,51 +2,42 @@
  * @file   bucket.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-21 15:09:27
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 /*
- 
+
    typedef struct slave_t{
         ZPIPE_ACTOR;
-
    } slave_t;
 
    void thread_main(zsock_t *pipe, void *user_data){
         slave_t *slave = (slave_t*)user_data;
-
-        ZPIPE_ACTOR_THREAD_BEGIN(pipe);
-
-        ZPIPE_ACTOR_THREAD_END(pipe);
    }
 
    slave_t *slave_new(){
         slave_t *slave = (slave_t*)malloc(sizeof(slave_t));
         memset(slave, 0, sizeof(slave_t));
-
         ZPIPE_ACTOR_NEW(slave, thread_main);
-
         return slave;
+   }
+
+   void slave_free(slave_t *slave){
+        ZPIPE_ACTOR_FREE(slave);
    }
 
    typedef struct master_t{
         ZPIPE;
-
-        slave_t **slaves;
    } master_t;
 
    master_t *master_new(uint32_t total_actors){
         master_t *master = (master_t*)malloc(sizeof(master_t));
         memset(master, 0, sizeof(master_t));
-
-        ZPIPE_NEW(master, total_actors);
-
-        for (int i = 0 ; i < total_actors ; i++ ){
-            slave_t *slave = slave_new();
-            master->slaves[i] = slave;
-        }
+        ZPIPE_NEW_BEGIN(master, total_actors);
+            slave_t *slave = slave_new(i);
+        ZPIPE_NEW_END(master, slave);
    }
 
    void master_free(master_t *master){
@@ -56,14 +47,14 @@
    void master_loop(master_t *master){
         ZPIPE_LOOP(master, slaves);
    }
-   
+
 */
 
 #include <czmq.h>
 #include "common.h"
 #include "logger.h"
-#include "everdata.h"
 #include "zpipe.h"
+#include "message.h"
 
 /* ================ zpipe_new() ================ */
 zpipe_t *zpipe_new(uint32_t total_actors)
@@ -99,6 +90,16 @@ void zpipe_actor_thread_begin(zsock_t *pipe)
 void zpipe_actor_thread_end(zsock_t *pipe)
 {
     message_send_status(pipe, MSG_STATUS_ACTOR_OVER);
+}
+
+/* ================ zpipe_actor_root_thread_main() ================ */
+void zpipe_actor_root_thread_main(zsock_t *pipe, void *user_data)
+{
+    zpipe_actor_args_t *actor_args = (zpipe_actor_args_t*)user_data;
+
+    zpipe_actor_thread_begin(pipe);
+    actor_args->thread_main(pipe, actor_args->user_data);
+    zpipe_actor_thread_end(pipe);
 }
 
 /* ================ zpipe_handle_pullin() ================ */

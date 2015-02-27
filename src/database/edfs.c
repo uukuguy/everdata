@@ -1,11 +1,11 @@
-/** 
+/**
  * @file   udfsmount.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   Fri Mar  2 19:19:53 2012
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #define FUSE_USE_VERSION 26
@@ -23,28 +23,27 @@
 
 #include "common.h"
 #include "logger.h"
-#include "cboost.h"
 #include "everdata.h"
 
 /* static const char *udfs_str = "Hello World!\n"; */
 
-static const char *udfs_path = "/hello"; 
-static const char *tmp_path = "/tmp"; 
+static const char *udfs_path = "/hello";
+static const char *tmp_path = "/tmp";
 
 static const char *g_current_path = NULL;
 
 static void* edfs_init(struct fuse_conn_info *conn)
 {
-    syslog(LOG_DEBUG, "edfs_init()"); 
+    syslog(LOG_DEBUG, "edfs_init()");
 
-    void* private_data = NULL; 
+    void* private_data = NULL;
 
-    return private_data; 
+    return private_data;
 }
 
 static void edfs_destroy(void *private_data)
 {
-    syslog(LOG_DEBUG, "edfs_destroy()"); 
+    syslog(LOG_DEBUG, "edfs_destroy()");
 }
 
 /*
@@ -95,34 +94,34 @@ S_IFMT   0170000    文件类型的位遮罩
     S_ISDIR (st_mode)    是否为目录
     S_ISCHR (st_mode)    是否为字符装置文件
     S_ISBLK (s3e)        是否为先进先出
-    S_ISSOCK (st_mode)   是否为socket    
+    S_ISSOCK (st_mode)   是否为socket
 */
 
 static int udfs_getattr(const char *path, struct stat *stbuf)
 {
-     syslog(LOG_DEBUG, "edfs_getattr() : %s", path); 
+     syslog(LOG_DEBUG, "edfs_getattr() : %s", path);
 
-    int res = 0; 
+    int res = 0;
 
-     memset(stbuf, 0, sizeof(struct stat)); 
+     memset(stbuf, 0, sizeof(struct stat));
 
-     if(strcmp(path, "/") == 0) { 
-         stbuf->st_mode = S_IFDIR | 0755; 
-         stbuf->st_nlink = 2; 
-     } 
-     else if(strcmp(path, tmp_path) == 0) { 
-          stbuf->st_mode = S_IFREG | 0444; 
-          stbuf->st_nlink = 1; 
-          stbuf->st_size = strlen(path); 
-     } 
+     if(strcmp(path, "/") == 0) {
+         stbuf->st_mode = S_IFDIR | 0755;
+         stbuf->st_nlink = 2;
+     }
+     else if(strcmp(path, tmp_path) == 0) {
+          stbuf->st_mode = S_IFREG | 0444;
+          stbuf->st_nlink = 1;
+          stbuf->st_size = strlen(path);
+     }
      else {
-         stbuf->st_mode = S_IFDIR | 0755; 
-         stbuf->st_nlink = 2; 
+         stbuf->st_mode = S_IFDIR | 0755;
+         stbuf->st_nlink = 2;
      }
      /*else */
           /*res = -ENOENT; */
 
-    return res; 
+    return res;
 }
 
 /** Open directory
@@ -166,15 +165,15 @@ static int edfs_releasedir(const char *path, struct fuse_file_info *fi)
 static int edfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                         off_t offset, struct fuse_file_info *fi)
 {
-    syslog(LOG_DEBUG, "edfs_readdir() : %s", path); 
+    syslog(LOG_DEBUG, "edfs_readdir() : %s", path);
 
-    filler(buf, ".", NULL, 0); 
-    filler(buf, "..", NULL, 0); 
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
 
-    filler(buf, udfs_path + 1, NULL, 0); 
-    filler(buf, tmp_path + 1, NULL, 0); 
+    filler(buf, udfs_path + 1, NULL, 0);
+    filler(buf, tmp_path + 1, NULL, 0);
 
-    return 0; 
+    return 0;
 }
 
 /** Synchronize directory contents
@@ -194,7 +193,7 @@ static int edfs_fsyncdir(const char *path, int parm, struct fuse_file_info *fi)
 
 static int edfs_open(const char *path, struct fuse_file_info *fi)
 {
-    syslog(LOG_INFO, "edfs_open() : %s", path); 
+    syslog(LOG_INFO, "edfs_open() : %s", path);
 
     /*  if(strcmp(path, udfs_path) != 0) */
     /*       return -ENOENT; */
@@ -202,13 +201,13 @@ static int edfs_open(const char *path, struct fuse_file_info *fi)
     /*  if((fi->flags & 3) != O_RDONLY) */
     /*       return -EACCES; */
 
-    return 0; 
+    return 0;
 }
 
 static int edfs_read(const char *path, char *buf, size_t size, off_t offset,
                      struct fuse_file_info *fi)
 {
-    syslog(LOG_DEBUG, "edfs_read() : %s size : %zu", path, size); 
+    syslog(LOG_DEBUG, "edfs_read() : %s size : %zu", path, size);
 
     /*size_t len = 0; */
     /* (void) fi; */
@@ -223,7 +222,7 @@ static int edfs_read(const char *path, char *buf, size_t size, off_t offset,
     /* } else */
     /*      size = 0; */
 
-    return size; 
+    return size;
 }
 
 /** Write data to an open file
@@ -237,18 +236,18 @@ static int edfs_read(const char *path, char *buf, size_t size, off_t offset,
 static int edfs_write(const char *path, const char *buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi)
 {
-    syslog(LOG_DEBUG, "edfs_write() : %s size : %zu", path, size); 
+    syslog(LOG_DEBUG, "edfs_write() : %s size : %zu", path, size);
 
-    return size; 
+    return size;
 }
 
 static int edfs_flush(const char *path, struct fuse_file_info *fi)
 {
-     
-    syslog(LOG_DEBUG, "edfs_flush() : %s", path); 
 
-    int ret = 0; 
-    return ret; 
+    syslog(LOG_DEBUG, "edfs_flush() : %s", path);
+
+    int ret = 0;
+    return ret;
 }
 
 /** Release an open file
@@ -305,20 +304,20 @@ static int edfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
 static int edfs_mkdir(const char *path, mode_t path_mode)
 {
-     syslog(LOG_DEBUG, "edfs_mkdir() : %s", path); 
+     syslog(LOG_DEBUG, "edfs_mkdir() : %s", path);
 
-    int ret = 0; 
+    int ret = 0;
     /* path_mode |= S_IFDIR; */
 
-    return ret; 
+    return ret;
 }
 
 static int edfs_rmdir(const char *path)
 {
-    syslog(LOG_DEBUG, "edfs_rmdir() : %s", path); 
+    syslog(LOG_DEBUG, "edfs_rmdir() : %s", path);
 
-    int ret = 0; 
-    return ret; 
+    int ret = 0;
+    return ret;
 }
 
 static int edfs_rename(const char *oldpath, const char *newpath)
@@ -329,17 +328,17 @@ static int edfs_rename(const char *oldpath, const char *newpath)
     return ret;
 }
 
-static int edfs_symlink(const char *path, const char *linkname) 
-{ 
-    int ret = 0; 
-    return ret; 
-} 
+static int edfs_symlink(const char *path, const char *linkname)
+{
+    int ret = 0;
+    return ret;
+}
 
-static int edfs_readlink(const char *linkname, char *buf, size_t size) 
-{ 
-    int ret = 0; 
-    return ret; 
-} 
+static int edfs_readlink(const char *linkname, char *buf, size_t size)
+{
+    int ret = 0;
+    return ret;
+}
 
 
 static int edfs_chmod(const char *path, mode_t file_mode)
@@ -364,10 +363,10 @@ static struct fuse_operations udfs_oper = {
 
     .getattr	= udfs_getattr,
 
-    .opendir    = edfs_opendir, 
+    .opendir    = edfs_opendir,
     .readdir	= edfs_readdir,
-    .releasedir = edfs_releasedir, 
-    .fsyncdir   = edfs_fsyncdir, 
+    .releasedir = edfs_releasedir,
+    .fsyncdir   = edfs_fsyncdir,
 
     .open	    = edfs_open,
     .read	    = edfs_read,
@@ -375,17 +374,17 @@ static struct fuse_operations udfs_oper = {
     .flush      = edfs_flush,
     .release    = edfs_release,
 
-    .unlink     = edfs_unlink, 
+    .unlink     = edfs_unlink,
     .mknod		= edfs_mknod,
 
     .mkdir      = edfs_mkdir,
     .rmdir      = edfs_rmdir,
 
-    .rename     = edfs_rename, 
-    .symlink    = edfs_symlink, 
-    .readlink   = edfs_readlink, 
-    .chmod      = edfs_chmod, 
-    .chown      = edfs_chown, 
+    .rename     = edfs_rename,
+    .symlink    = edfs_symlink,
+    .readlink   = edfs_readlink,
+    .chmod      = edfs_chmod,
+    .chown      = edfs_chown,
 };
 
 int main(int argc, char *argv[])

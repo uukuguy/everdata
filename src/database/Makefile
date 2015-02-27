@@ -1,6 +1,4 @@
 
-EVERDATA_OBJS = everdata.c.o zpipe.c.o
-
 EDBROKER = ../../bin/edbroker
 EDBROKER_OBJS = edbroker_main.c.o edbroker.c.o
 
@@ -14,21 +12,23 @@ EDFS = ../../bin/edfs
 EDFS_OBJS = edfs.c.o
 
 LIBUTILS = ../utils/libutils.a
-#LIBSERVER_OBJS = ../server/vnode.c.o ../server/datazone.c.o ../server/object.c.o
+LIBKVDB = ../kvdb/libkvdb.a
+LIBCRUSH = ../crush/libcrush.a
+CFLAGS_LIBCRUSH = -I../crush
 
 all: ${EDBROKER} ${EDWORKER} ${EDCLIENT} ${EDFS}
 
 include ../Makefile.common
 
-FINAL_CFLAGS += -I../kvdb
-FINAL_CXXFLAGS += -I../kvdb
+FINAL_CFLAGS += ${CFLAGS_LIBCRUSH}
+FINAL_CXXFLAGS += ${CFLAGS_LIBCRUSH}
 
 ifeq (${UNAME}, Darwin)
 	FINAL_CFLAGS += -I/opt/local/include/osxfuse
 endif
 
 
-FINAL_LDFLAGS += ../kvdb/libkvdb.a ../utils/libutils.a 
+FINAL_LDFLAGS += ${LIBCRUSH} ${LIBKVDB} ${LIBUTILS}
 FINAL_LDFLAGS += -lczmq -lzmq -ljemalloc
 FINAL_LDFLAGS += -llmdb -lleveldb
 FINAL_LDFLAGS += -lmsgpack -lbz2
@@ -44,18 +44,18 @@ FINAL_LDFLAGS += -lpthread -lssl -lcrypto
 FINAL_LDFLAGS += -lstdc++ -lm -lz
 
 
-${EDBROKER}: ${LIBBASE} ${EDBROKER_OBJS} ${EVERDATA_OBJS}
-	${CC} -o ${EDBROKER} ${EDBROKER_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
+${EDBROKER}: ${LIBBASE} ${EDBROKER_OBJS} 
+	${CC} -o ${EDBROKER} ${EDBROKER_OBJS} ${FINAL_LDFLAGS}
 
-${EDWORKER}: ${LIBBASE} ${LIBSERVER_OBJS} ${EDWORKER_OBJS} ${EVERDATA_OBJS}
-	${CC} -o ${EDWORKER} ${EDWORKER_OBJS} ${LIBSERVER_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
+${EDWORKER}: ${LIBBASE} ${LIBSERVER_OBJS} ${EDWORKER_OBJS} 
+	${CC} -o ${EDWORKER} ${EDWORKER_OBJS} ${LIBSERVER_OBJS} ${FINAL_LDFLAGS}
 
-${EDCLIENT}: ${LIBBASE} ${EDCLIENT_OBJS} ${EVERDATA_OBJS}
-	${CC} -o ${EDCLIENT} ${EDCLIENT_OBJS} ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
+${EDCLIENT}: ${LIBBASE} ${EDCLIENT_OBJS} 
+	${CC} -o ${EDCLIENT} ${EDCLIENT_OBJS} ${FINAL_LDFLAGS}
 
-${EDFS}: edclient.c.o ${LIBBASE} ${EDFS_OBJS} ${EVERDATA_OBJS}
-	${CC} -o ${EDFS} ${EDFS_OBJS} edclient.c.o ${EVERDATA_OBJS} ${FINAL_LDFLAGS}
+${EDFS}: edclient.c.o ${LIBBASE} ${EDFS_OBJS} 
+	${CC} -o ${EDFS} ${EDFS_OBJS} edclient.c.o ${FINAL_LDFLAGS}
 
 clean:
-	rm -f ${EVERDATA_OBJS} ${EDBROKER} ${EDBROKER_OBJS} ${EDWORKER} ${EDWORKER_OBJS} ${EDCLIENT} ${EDCLIENT_OBJS}
+	rm -f ${EDBROKER} ${EDBROKER_OBJS} ${EDWORKER} ${EDWORKER_OBJS} ${EDCLIENT} ${EDCLIENT_OBJS}
 

@@ -2,10 +2,10 @@
  * @file   edclient.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-08 03:48:12
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include <czmq.h>
@@ -54,7 +54,7 @@ int prepare_file_data(const char *filename)
     char *buf = zmalloc(size);
 
     memset(buf, 0, sizeof(size));
-    uint32_t readed = fread(buf, 1, size, file); 
+    uint32_t readed = fread(buf, 1, size, file);
     if ( readed != size ){
         error_log("fread() failed. readed:%d file_size:%d", readed, size);
         fclose(file);
@@ -200,7 +200,7 @@ void client_thread_main(zsock_t *pipe, void *user_data)
 
     trace_log("Client %d Ready.", id);
 
-    ZPIPE_ACTOR_THREAD_BEGIN(pipe);
+    /*ZPIPE_ACTOR_THREAD_BEGIN(pipe);*/
 
     zsock_t *sock_client = zsock_new_req(client->endpoint);
     if ( sock_client == NULL ){
@@ -242,7 +242,7 @@ void client_thread_main(zsock_t *pipe, void *user_data)
             break;
     }
 
-    ZPIPE_ACTOR_THREAD_END(pipe);
+    /*ZPIPE_ACTOR_THREAD_END(pipe);*/
 
     zsock_destroy(&sock_client);
 
@@ -322,12 +322,12 @@ void edclient_loop(edclient_t *edclient){
 
     ZPIPE_NEW_BEGIN(edclient, edclient->total_clients);
 
-    client_t *client = client_new(i, 
-            edclient->endpoint, 
-            edclient->op_code, 
-            edclient->total_files, 
-            edclient->key, 
-            edclient->filename, 
+    client_t *client = client_new(i,
+            edclient->endpoint,
+            edclient->op_code,
+            edclient->total_files,
+            edclient->key,
+            edclient->filename,
             edclient->verbose);
 
     ZPIPE_NEW_END(edclient, client);

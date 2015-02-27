@@ -132,6 +132,7 @@ int bucket_handle_message(bucket_t *bucket, zsock_t *sock, zmsg_t *msg)
     zmsg_t *sendback_msg = NULL;
 
     /*sendback_msg = create_status_message(MSG_STATUS_WORKER_ACK);*/
+
     if ( message_check_action(msg, MSG_ACTION_PUT) == 0 ){
         sendback_msg = bucket_put_data(bucket, sock, identity, msg);
     } else if (message_check_action(msg, MSG_ACTION_GET) == 0 ) {
@@ -154,22 +155,12 @@ int bucket_handle_message(bucket_t *bucket, zsock_t *sock, zmsg_t *msg)
 void bucket_thread_main(zsock_t *pipe, void *user_data)
 {
     bucket_t *bucket = (bucket_t*)user_data;
-
     trace_log("Bucket %d Ready.", bucket->id);
 
-    ZPIPE_ACTOR_THREAD_BEGIN(pipe);
-    {
-        ZPIPE_NEW_BEGIN(bucket, bucket->total_channels);
-
-        channel_t *channel = channel_new(bucket, i);
-
-        ZPIPE_NEW_END(bucket, channel);
-
-        ZPIPE_LOOP(bucket);
-
-    }
-
-    ZPIPE_ACTOR_THREAD_END(pipe);
+    ZPIPE_NEW_BEGIN(bucket, bucket->total_channels);
+    channel_t *channel = channel_new(bucket, i);
+    ZPIPE_NEW_END(bucket, channel);
+    ZPIPE_LOOP(bucket);
 
     trace_log("Bucket(%d) Exit.", bucket->id);
 }
@@ -203,12 +194,12 @@ void bucket_free(bucket_t *bucket)
 {
     ZPIPE_FREE(bucket, channel_free);
 
+    ZPIPE_ACTOR_FREE(bucket);
+
     if ( bucket->bucketdb != NULL ){
         bucketdb_free(bucket->bucketdb);
         bucket->bucketdb = NULL;
     }
-
-    ZPIPE_ACTOR_FREE(bucket);
 
     free(bucket);
 }

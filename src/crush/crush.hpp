@@ -31,10 +31,10 @@ device 5 osd005 offload 0.1
 device 6 osd006 offload 0.1
 
 # hierarchy
-level 0 osd   # 'device' is actually the default for 0
-level 2 cab
-level 3 row
-level 10 pool
+type 0 osd   # 'device' is actually the default for 0
+type 2 cab
+type 3 row
+type 10 pool
 
 # item
 cab root {
@@ -84,21 +84,21 @@ class CRush
 
     private:
 
-        std::map<int32_t, std::string> level_map; /* bucket/device level names */
+        std::map<int32_t, std::string> type_map; /* bucket/device type names */
         std::map<int32_t, std::string> name_map; /* bucket/device names */
         std::map<int32_t, std::string> rule_name_map;
         mutable bool have_rmaps;
-        mutable std::map<std::string, int> level_rmap, name_rmap, rule_name_rmap;
+        mutable std::map<std::string, int> type_rmap, name_rmap, rule_name_rmap;
 
         void build_rmaps() const;
         void build_rmap(const std::map<int, std::string> &f, std::map<std::string, int> &r) const;
 
     public:
-        // levels
-        int get_max_levels() const;
-        int get_level_id(const std::string& name) const;
-        const char *get_level_name(int levelid) const;
-        void set_level_name(int levelid, const std::string& name);
+        // types
+        int get_max_types() const;
+        int get_type_id(const std::string& name) const;
+        const char *get_type_name(int type_id) const;
+        void set_type_name(int type_id, const std::string& name);
 
         // item/bucket names
         bool name_exists(const std::string& name) const;
@@ -149,7 +149,7 @@ class CRush
         int set_rule_step(unsigned ruleno, unsigned step, int op, int arg1, int arg2);
         void do_rule(int ruleno, int x, std::vector<int>& out, int maxout, const std::vector<uint32_t>& weights) const;
 
-        int create_sample_rule(const std::string &rule_name, const std::string &rule_mode, int rule_type, int ruleset, const std::string &root_item, const std::string &level_name);
+        int create_sample_rule(const std::string &rule_name, const std::string &rule_mode, int rule_type, int ruleset, const std::string &root_item, const std::string &type_name);
 
         int32_t get_max_rules() const;
 
@@ -157,10 +157,10 @@ class CRush
     public:
 
         // bucketno = 0 for auto id.
-        int add_bucket(int bucketid, int type, int size, int *items, int *weights, int *idout, int alg = 0);
-        int move_bucket(int bucketid, const std::map<std::string, std::string>& loc);
-        int link_bucket(int bucketid, const std::map<std::string, std::string>& loc);
-        crush_bucket *get_bucket(int bucketid) const;
+        int add_bucket(int bucket_id, int type, int size, int *items, int *weights, int *idout, int alg = 0);
+        int move_bucket(int bucket_id, const std::map<std::string, std::string>& loc);
+        int link_bucket(int bucket_id, const std::map<std::string, std::string>& loc);
+        crush_bucket *get_bucket(int bucket_id) const;
 
         int create_or_move_item(int itemid, float weight, std::string name, const std::map<std::string, std::string>& loc);
 
@@ -186,8 +186,8 @@ class CRush
         int adjust_item_weight_in_loc(int id, int weight, const std::map<std::string, std::string>& loc);
         int adjust_item_weightf_in_loc(int id, float weight, const std::map<std::string, std::string>& loc);
 
-        int adjust_subtree_weight(int bucketid, int weight);
-        int adjust_subtree_weightf(int bucketid, float weight);
+        int adjust_subtree_weight(int bucket_id, int weight);
+        int adjust_subtree_weightf(int bucket_id, float weight);
 
         void reweight();
 
@@ -202,7 +202,7 @@ class CRush
 
         int detach_bucket(int item);
 
-        // <level_name, item_name>
+        // <type_name, item_name>
         std::pair<std::string, std::string> get_immediate_parent(int id, int *_ret = NULL) const;
 
         std::map<std::string, std::string> get_full_location(int id) const;

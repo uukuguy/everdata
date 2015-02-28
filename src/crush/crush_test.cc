@@ -13,16 +13,16 @@ int main(int argc, char *argv[])
 {
     CRush crush;
 
-    crush.set_level_name(0, "bucket");
-    crush.set_level_name(1, "datanode");
-    crush.set_level_name(2, "host");
-    crush.set_level_name(10, "root");
+    crush.set_type_name(0, "bucket");
+    crush.set_type_name(1, "datanode");
+    crush.set_type_name(2, "host");
+    crush.set_type_name(10, "root");
 
     int rootno;
-    int bucketno = 0; // 0 for auto id.
-    std::string item_level = "root";
-    int level_id = crush.get_level_id(item_level);
-    crush.add_bucket(bucketno, level_id, 0, NULL, NULL, &rootno);
+    int bucket_id = 0; // 0 for auto id.
+    std::string item_type = "root";
+    int type_id = crush.get_type_id(item_type);
+    crush.add_bucket(bucket_id, type_id, 0, NULL, NULL, &rootno);
     crush.set_item_name(rootno, "root.0");
 
     int item_id = crush.get_item_id("root.0");
@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
     loc["root"] = "root.0";
     int osd = 0;
 
-    int level_host_id = crush.get_level_id("host");
-    int level_datanode_id = crush.get_level_id("datanode");
+    int type_host_id = crush.get_type_id("host");
+    int type_datanode_id = crush.get_type_id("datanode");
     for (int h = 0 ; h < num_host; ++h) {
         char host_name[256];
         sprintf(host_name, "host.%d", h);
@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
     int ruleset = 0;
     std::string root_item = "root.0";
     //std::string root_item = "datanode.0.0";
-    std::string level_name = "bucket";
-    //std::string level_name = "datanode";
-    int ruleno = crush.create_sample_rule(rule_name, rule_mode, rule_type, ruleset, root_item, level_name);
+    std::string type_name = "bucket";
+    //std::string type_name = "datanode";
+    int rule_id = crush.create_sample_rule(rule_name, rule_mode, rule_type, ruleset, root_item, type_name);
 
     crush.finalize();
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
     for (int x = 0; x < 5; ++x) {
         std::vector<int> out;
-        crush.do_rule(ruleno, x, out, 3, weights);
+        crush.do_rule(rule_id, x, out, 3, weights);
         std::cout << "x: " << x  << " get " << out.size() << std::endl;
         for (int n = 0 ; n < out.size() ; n++ ) {
             std::cout << out[n] << ", ";

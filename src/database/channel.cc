@@ -58,7 +58,7 @@ void channel_thread_main(zsock_t *pipe, void *user_data)
 
     zpoller_t *poller = zpoller_new(broker_sock, NULL);
     while ( true ){
-        zsock_t *sock = zpoller_wait(poller, HEARTBEAT_INTERVAL);
+        zsock_t *sock = (zsock_t*)zpoller_wait(poller, HEARTBEAT_INTERVAL);
 
         if ( zclock_time() > channel->heartbeat_at ){
             trace_log("--> Channel(%d) Bucket(%d) Datanode(%d) Send worker heartbeat.", channel->id, bucket->id, datanode->id);

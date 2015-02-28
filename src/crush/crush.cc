@@ -10,6 +10,13 @@
 
 #include "crush.hpp"
 
+extern "C"{
+#include "crush.h"
+#include "mapper.h"
+#include "builder.h"
+#include "hash.h"
+}
+
 CRush::CRush()
     : m_crush(NULL), have_rmaps(false)
 {
@@ -26,10 +33,11 @@ void CRush::dump(const char *filename) const
     for ( int i = 0 ; i <m_crush->max_buckets ; i++ ) {
         struct crush_bucket *b = m_crush->buckets[i];
         if ( b != NULL ) {
-            std::cout << "bucket[" << i << "]" << " id:" << b->id
+            const std::string bucket_name = get_item_name(b->id);
+            std::cout << "bucket[" << i << "] " << "\"" << bucket_name << "\"" << " id:" << b->id
                 << " type:" << b->type
-                << " alg:" << b->alg
-                << " hash:" << b->hash
+                << " alg:" << (int)b->alg
+                << " hash:" << (int)b->hash
                 << " weight:" << b->weight
                 << " size:" << b->size
                 << std::endl;
@@ -44,89 +52,160 @@ void CRush::dump(const char *filename) const
     }
 }
 
+void CRush::create()
+{
+    if ( m_crush != NULL ) crush_destroy(m_crush);
+    m_crush = crush_create();
+    have_rmaps = false;
+    set_tunables_default();
+}
+
+void CRush::finalize()
+{
+    crush_finalize(m_crush);
+}
+
+// ================ rules ================
+
+crush_rule* CRush::get_rule(uint32_t ruleid) const
+{
+    if ( ruleid < m_crush->max_rules) {
+        return m_crush->rules[ruleid];
+    }
+    return NULL;
+}
+
+crush_rule_step* CRush::get_rule_step(uint32_t ruleid, uint32_t step) const
+{
+    crush_rule *rule = get_rule(ruleid);
+    if ( rule != NULL && step < rule->len ) {
+        return &rule->steps[step];
+    }
+    return NULL;
+}
+
+int CRush::add_rule(const std::string &rule_name, int ruleset, int steps, int rule_type, int min_size, int max_size)
+{
+    crush_rule *rule = crush_make_rule(steps, ruleset, rule_type, min_size, max_size);
+    int ruleno = crush_add_rule(m_crush, rule, -1);
+    if (ruleno >= 0 ) {
+        set_rule_name(ruleno, rule_name);
+        have_rmaps = false;
+    }
+    return ruleno;
+}
+
+int CRush::set_rule_step(unsigned ruleno, unsigned step, int op, int arg1, int arg2)
+{
+    crush_rule *rule = get_rule(ruleno);
+    if ( rule != NULL ) {
+        crush_rule_set_step(rule, step, op, arg1, arg2);
+        return 0;
+    }
+    return -1;
+}
+
 int32_t CRush::get_max_rules() const
 {
     return m_crush->max_rules;
 }
 
-int CRush::move_bucket(int bucketno, const std::map<std::string, std::string>& loc)
+// ================ buckets ================
+
+int CRush::add_bucket(int bucketid, int type, int size, int *items, int *weights, int *idout, int alg)
+{
+    if (type == 0)
+        return -EINVAL;
+
+    if ( alg == 0 ) alg = CRUSH_BUCKET_STRAW;
+    int hash = CRUSH_HASH_DEFAULT;
+    crush_bucket *b = crush_make_bucket(m_crush, alg, hash, type, size, items, weights);
+    return crush_add_bucket(m_crush, bucketid, b, idout);
+}
+
+int CRush::move_bucket(int bucketid, const std::map<std::string, std::string>& loc)
 {
   // sorry this only works for buckets
-  if (bucketno >= 0)
+  if (bucketid >= 0)
     return -EINVAL;
 
-  if (!item_exists(bucketno))
+  if (!item_exists(bucketid))
     return -ENOENT;
 
   // get the name of the bucket we are trying to move for later
-  std::string bucket_name = get_item_name(bucketno);
+  std::string bucket_name = get_item_name(bucketid);
 
   // detach the bucket
-  int bucket_weight = detach_bucket(bucketno);
+  int bucket_weight = detach_bucket(bucketid);
 
   // insert the bucket back into the hierarchy
-  int alg = CRUSH_BUCKET_STRAW;
-  int hash = CRUSH_HASH_DEFAULT;
-  return insert_item(bucketno, bucket_weight / (float)0x10000, bucket_name, alg, hash, loc);
+  return insert_item(bucketid, bucket_weight / (float)0x10000, bucket_name, loc);
 }
 
-int CRush::link_bucket(int id, const std::map<std::string, std::string>& loc)
+int CRush::link_bucket(int bucketid, const std::map<std::string, std::string>& loc)
 {
   // sorry this only works for buckets
-  if (id >= 0)
+  if (bucketid >= 0)
     return -EINVAL;
 
-  if (!item_exists(id))
+  if (!item_exists(bucketid))
     return -ENOENT;
 
   // get the name of the bucket we are trying to move for later
-  std::string id_name = get_item_name(id);
+  std::string bucket_name = get_item_name(bucketid);
 
-  crush_bucket *b = get_bucket(id);
+  crush_bucket *b = get_bucket(bucketid);
   unsigned bucket_weight = b->weight;
 
-  int alg = CRUSH_BUCKET_STRAW;
-  int hash = CRUSH_HASH_DEFAULT;
-  return insert_item(id, bucket_weight / (float)0x10000, id_name, alg, hash, loc);
+  return insert_item(bucketid, bucket_weight / (float)0x10000, bucket_name, loc);
 }
 
-int CRush::create_or_move_item(int item, float weight, std::string name, const std::map<std::string, std::string>& loc)
+crush_bucket* CRush::get_bucket(int bucketid) const
+{
+    unsigned int pos = (unsigned int)(-1 - bucketid);
+    unsigned int max_buckets = m_crush->max_buckets;
+    if ( pos < max_buckets ) {
+        crush_bucket *b = m_crush->buckets[pos];
+        return b;
+    }
+    return NULL;
+}
+
+int CRush::create_or_move_item(int itemid, float weight, std::string name, const std::map<std::string, std::string>& loc)
 {
     int ret = 0;
     int old_iweight;
 
     //if (check_item_loc(cct, item, loc, &old_iweight)) {
-        //ldout(cct, 5) << "create_or_move_item " << item << " already at " << loc << dendl;
+        //ldout(cct, 5) << "create_or_move_item " << itemid << " already at " << loc << dendl;
     //} else {
-        if ( _search_item_exists(item) ) {
-            weight = get_item_weightf(item);
-            //ldout(cct, 10) << "create_or_move_item " << item << " exists with weight " << weight << dendl;
-            remove_item(item, true);
+        if ( _search_item_exists(itemid) ) {
+            weight = get_item_weightf(itemid);
+            //ldout(cct, 10) << "create_or_move_item " << itemid << " exists with weight " << weight << dendl;
+            remove_item(itemid, true);
         }
-        //ldout(cct, 5) << "create_or_move_item adding " << item << " weight " << weight
+        //ldout(cct, 5) << "create_or_move_item adding " << itemid << " weight " << weight
             //<< " at " << loc << dendl;
-        int alg = CRUSH_BUCKET_STRAW;
-        int hash = CRUSH_HASH_DEFAULT;
-        ret = insert_item(item, weight, name, alg, hash, loc);
+        ret = insert_item(itemid, weight, name, loc);
         if (ret == 0)
             ret = 1;  // changed
     //}
     return ret;
 }
 
-int CRush::insert_item(int item, float weight, std::string name, int alg, int hash, const std::map<std::string, std::string>& loc)  // typename -> bucketname
+int CRush::insert_item(int itemid, float weight, std::string name, const std::map<std::string, std::string>& loc)  // typename -> bucketname
 {
     if (name_exists(name)) {
-        if (get_item_id(name) != item) {
+        if (get_item_id(name) != itemid) {
             std::cout << "device name '" << name << "' already exists as id "
                 << get_item_id(name) << std::endl;
             return -EEXIST;
         }
     } else {
-        set_item_name(item, name);
+        set_item_name(itemid, name);
     }
 
-    int cur = item;
+    int cur = itemid;
 
     std::cout << "===============" << std::endl;
     // create locations if locations don't exist and add child in location with 0 weight
@@ -151,7 +230,7 @@ int CRush::insert_item(int item, float weight, std::string name, int alg, int ha
         if (!name_exists(q->second)) {
             std::cout << "insert_item creating bucket " << q->second << std::endl;
             int empty = 0, newid;
-            int r = add_bucket(0, alg, hash, p->first, 1, &cur, &empty, &newid);
+            int r = add_bucket(0, p->first, 1, &cur, &empty, &newid);
             if (r < 0) {
                 return r;
             }
@@ -198,9 +277,9 @@ int CRush::insert_item(int item, float weight, std::string name, int alg, int ha
     }
 
     // adjust the item's weight in location
-    if(adjust_item_weightf_in_loc(item, weight, loc) > 0) {
-        if (item >= m_crush->max_devices) {
-            m_crush->max_devices = item + 1;
+    if(adjust_item_weightf_in_loc(itemid, weight, loc) > 0) {
+        if (itemid >= m_crush->max_devices) {
+            m_crush->max_devices = itemid + 1;
             std::cout << "insert_item max_devices now " << m_crush->max_devices << std::endl;
         }
         return 0;
@@ -210,9 +289,9 @@ int CRush::insert_item(int item, float weight, std::string name, int alg, int ha
     return -1;
 }
 
-int CRush::update_item(int item, float weight, std::string name, const std::map<std::string, std::string>& loc)  // typename -> bucketname
+int CRush::update_item(int itemid, float weight, std::string name, const std::map<std::string, std::string>& loc)  // typename -> bucketname
 {
-    //ldout(cct, 5) << "update_item item " << item << " weight " << weight
+    //ldout(cct, 5) << "update_item item " << itemid << " weight " << weight
         //<< " name " << name << " loc " << loc << dendl;
     int ret = 0;
 
@@ -225,45 +304,43 @@ int CRush::update_item(int item, float weight, std::string name, const std::map<
     // compare quantized (fixed-point integer) weights!
     int iweight = (int)(weight * (float)0x10000);
     int old_iweight;
-    if (check_item_loc(item, loc, &old_iweight)) {
-        //ldout(cct, 5) << "update_item " << item << " already at " << loc << dendl;
+    if (check_item_loc(itemid, loc, &old_iweight)) {
+        //ldout(cct, 5) << "update_item " << itemid << " already at " << loc << dendl;
         if (old_iweight != iweight) {
-            //ldout(cct, 5) << "update_item " << item << " adjusting weight "
+            //ldout(cct, 5) << "update_item " << itemid << " adjusting weight "
                 //<< ((float)old_iweight/(float)0x10000) << " -> " << weight << dendl;
-            adjust_item_weight_in_loc(item, iweight, loc);
+            adjust_item_weight_in_loc(itemid, iweight, loc);
             ret = 1;
         }
-        if (get_item_name(item) != name) {
-            //ldout(cct, 5) << "update_item setting " << item << " name to " << name << dendl;
-            set_item_name(item, name);
+        if (get_item_name(itemid) != name) {
+            //ldout(cct, 5) << "update_item setting " << itemid << " name to " << name << dendl;
+            set_item_name(itemid, name);
             ret = 1;
         }
     } else {
-        if (item_exists(item)) {
-            remove_item(item, true);
+        if (item_exists(itemid)) {
+            remove_item(itemid, true);
         }
-        //ldout(cct, 5) << "update_item adding " << item << " weight " << weight
+        //ldout(cct, 5) << "update_item adding " << itemid << " weight " << weight
             //<< " at " << loc << dendl;
 
-        int alg = CRUSH_BUCKET_STRAW;
-        int hash = CRUSH_HASH_DEFAULT;
-        ret = insert_item(item, weight, name, alg, hash, loc);
+        ret = insert_item(itemid, weight, name, loc);
         if (ret == 0)
             ret = 1;  // changed
     }
     return ret;
 }
 
-int CRush::remove_item(int item, bool unlink_only)
+int CRush::remove_item(int itemid, bool unlink_only)
 {
-    //ldout(cct, 5) << "remove_item " << item << (unlink_only ? " unlink_only":"") << dendl;
+    //ldout(cct, 5) << "remove_item " << itemid << (unlink_only ? " unlink_only":"") << dendl;
 
     int ret = -ENOENT;
 
-    if (item < 0 && !unlink_only) {
-        crush_bucket *t = get_bucket(item);
+    if ( itemid < 0 && !unlink_only ) {
+        crush_bucket *t = get_bucket(itemid);
         if (t && t->size) {
-            //ldout(cct, 1) << "remove_item bucket " << item << " has " << t->size
+            //ldout(cct, 1) << "remove_item bucket " << itemid << " has " << t->size
                 //<< " items, not empty" << dendl;
             return -ENOTEMPTY;
         }
@@ -276,41 +353,64 @@ int CRush::remove_item(int item, bool unlink_only)
 
         for (unsigned i=0; i < b->size; ++i) {
             int id = b->items[i];
-            if (id == item) {
-                //ldout(cct, 5) << "remove_item removing item " << item
+            if (id == itemid) {
+                //ldout(cct, 5) << "remove_item removing item " << itemid
                     //<< " from bucket " << b->id << dendl;
-                crush_bucket_remove_item(m_crush, b, item);
+                crush_bucket_remove_item(m_crush, b, itemid);
                 adjust_item_weight(b->id, b->weight);
                 ret = 0;
             }
         }
     }
 
-    if (_maybe_remove_last_instance(item, unlink_only))
+    if (_maybe_remove_last_instance(itemid, unlink_only))
         ret = 0;
 
     return ret;
 }
 
-bool CRush::rule_exists(int32_t ruleno) const
+int CRush::get_max_devices() const
 {
-    if ( m_crush != NULL ) {
-        if ( ruleno < m_crush->max_rules && m_crush->rules[ruleno] != NULL ) {
-            return true;
-        }
-    }
-    return false;
+    return m_crush->max_devices;
 }
 
-bool CRush::ruleset_exists(uint8_t ruleset) const
+
+int CRush::get_item_weight(int id) const
 {
-    for ( uint32_t i = 0; i < m_crush->max_rules; ++i) {
-        if ( rule_exists(i) && m_crush->rules[i]->mask.ruleset == ruleset) {
-            return true;
+    for (int bidx = 0; bidx < m_crush->max_buckets; bidx++) {
+        crush_bucket *b = m_crush->buckets[bidx];
+        if (b == NULL)
+            continue;
+        for (unsigned i = 0; i < b->size; i++)
+            if (b->items[i] == id)
+                return crush_get_bucket_item_weight(b, i);
+    }
+    return -ENOENT;
+}
+
+float CRush::get_item_weightf(int id) const
+{
+    return (float)get_item_weight(id) / (float)0x10000;
+}
+
+int CRush::get_item_weight_in_loc(int id, const std::map<std::string, std::string> &loc)
+{
+    for (std::map<std::string, std::string>::const_iterator l = loc.begin(); l != loc.end(); ++l) {
+        int bid = get_item_id(l->second);
+        crush_bucket *b = get_bucket(bid);
+        if ( b == NULL ) continue;
+        for (unsigned int i = 0; i < b->size; i++) {
+            if (b->items[i] == id) {
+                return crush_get_bucket_item_weight(b, i);
+            }
         }
     }
+    return -ENOENT;
+}
 
-    return false;
+float CRush::get_item_weightf_in_loc(int id, const std::map<std::string, std::string> &loc)
+{
+    return (float)get_item_weight_in_loc(id, loc) / (float)0x10000;
 }
 
 int CRush::adjust_item_weight(int id, int weight)
@@ -332,32 +432,9 @@ int CRush::adjust_item_weight(int id, int weight)
     return changed;
 }
 
-int CRush::get_item_weight(int id) const
+int CRush::adjust_item_weightf(int id, float weight)
 {
-    for (int bidx = 0; bidx < m_crush->max_buckets; bidx++) {
-        crush_bucket *b = m_crush->buckets[bidx];
-        if (b == NULL)
-            continue;
-        for (unsigned i = 0; i < b->size; i++)
-            if (b->items[i] == id)
-                return crush_get_bucket_item_weight(b, i);
-    }
-    return -ENOENT;
-}
-
-int CRush::get_item_weight_in_loc(int id, const std::map<std::string, std::string> &loc)
-{
-    for (std::map<std::string, std::string>::const_iterator l = loc.begin(); l != loc.end(); ++l) {
-        int bid = get_item_id(l->second);
-        crush_bucket *b = get_bucket(bid);
-        if ( b == NULL ) continue;
-        for (unsigned int i = 0; i < b->size; i++) {
-            if (b->items[i] == id) {
-                return crush_get_bucket_item_weight(b, i);
-            }
-        }
-    }
-    return -ENOENT;
+    return adjust_item_weight(id, (int)(weight * (float)0x10000));
 }
 
 int CRush::adjust_item_weight_in_loc(int id, int weight, const std::map<std::string, std::string>& loc)
@@ -386,51 +463,52 @@ int CRush::adjust_item_weight_in_loc(int id, int weight, const std::map<std::str
     return changed;
 }
 
-bool CRush::check_item_loc(int item, const std::map<std::string, std::string>& loc, int *weight)
+int CRush::adjust_item_weightf_in_loc(int id, float weight, const std::map<std::string, std::string>& loc)
 {
-    //ldout(cct, 5) << "check_item_loc item " << item << " loc " << loc << dendl;
+    return adjust_item_weight_in_loc(id, (int)(weight * (float)0x10000), loc);
+}
 
-    for ( std::map<int, std::string>::const_iterator p = level_map.begin(); p != level_map.end(); ++p) {
-        // ignore device
-        if (p->first == 0)
-            continue;
-
-        // ignore types that aren't specified in loc
-        std::map<std::string, std::string>::const_iterator q = loc.find(p->second);
-        if (q == loc.end()) {
-            //ldout(cct, 2) << "warning: did not specify location for '" << p->second << "' level (levels are "
-                //<< type_map << ")" << dendl;
-            continue;
-        }
-
-        if (!name_exists(q->second)) {
-            //ldout(cct, 5) << "check_item_loc bucket " << q->second << " dne" << dendl;
-            return false;
-        }
-
-        int id = get_item_id(q->second);
-        if (id >= 0) {
-            //ldout(cct, 5) << "check_item_loc requested " << q->second << " for type " << p->second
-                //<< " is a device, not bucket" << dendl;
-            return false;
-        }
-
-        crush_bucket *b = get_bucket(id);
-
-        // see if item exists in this bucket
-        for (unsigned j=0; j<b->size; j++) {
-            if (b->items[j] == item) {
-                //ldout(cct, 2) << "check_item_loc " << item << " exists in bucket " << b->id << dendl;
-                if (weight)
-                    *weight = crush_get_bucket_item_weight(b, j);
-                return true;
+int CRush::adjust_subtree_weight(int bucketid, int weight)
+{
+    //ldout(cct, 5) << "adjust_item_weight " << bucketid << " weight " << weight << dendl;
+    crush_bucket *b = get_bucket(bucketid);
+    if ( b == NULL ) return -1;
+    int changed = 0;
+    std::list<crush_bucket*> q;
+    q.push_back(b);
+    while (!q.empty()) {
+        b = q.front();
+        q.pop_front();
+        for (unsigned i=0; i<b->size; ++i) {
+            int n = b->items[i];
+            if (n >= 0) {
+                crush_bucket_adjust_item_weight(m_crush, b, n, weight);
+            } else {
+                crush_bucket *sub = get_bucket(n);
+                if ( sub == NULL )
+                    continue;
+                q.push_back(sub);
             }
         }
-        return false;
     }
+    return changed;
+}
 
-    //ldout(cct, 1) << "check_item_loc item " << item << " loc " << loc << dendl;
-    return false;
+int CRush::adjust_subtree_weightf(int bucketid, float weight)
+{
+    return adjust_subtree_weight(bucketid, (int)(weight * (float)0x10000));
+}
+
+void CRush::reweight()
+{
+    std::set<int> roots;
+    find_roots(roots);
+    for (std::set<int>::iterator p = roots.begin(); p != roots.end(); ++p) {
+        if (*p >= 0) continue;
+        crush_bucket *b = get_bucket(*p);
+        //ldout(cct, 5) << "reweight bucket " << *p << dendl;
+        crush_reweight_bucket(m_crush, b);
+    }
 }
 
 int CRush::create_sample_rule(const std::string &rule_name, const std::string &rule_mode, int rule_type, int ruleset, const std::string &root_item, const std::string &level_name)
@@ -483,5 +561,476 @@ void CRush::do_rule(int ruleno, int x, std::vector<int>& out, int maxout, const 
     out.resize(numrep);
     for (int i=0; i<numrep; i++)
         out[i] = rawout[i];
+}
+
+// ================ level/bucket/devices/rule names ================
+
+void CRush::build_rmaps() const
+{
+    if (have_rmaps) return;
+    build_rmap(level_map, level_rmap);
+    build_rmap(name_map, name_rmap);
+    build_rmap(rule_name_map, rule_name_rmap);
+    have_rmaps = true;
+}
+
+void CRush::build_rmap(const std::map<int, std::string> &f, std::map<std::string, int> &r) const
+{
+    r.clear();
+    for (std::map<int, std::string>::const_iterator p = f.begin(); p != f.end(); ++p)
+        r[p->second] = p->first;
+}
+
+// ---------------- level names ----------------
+
+int CRush::get_max_levels() const
+{
+    return level_map.size();
+}
+
+int CRush::get_level_id(const std::string& name) const
+{
+    build_rmaps();
+    if (level_rmap.count(name))
+        return level_rmap[name];
+    return -1;
+}
+
+const char* CRush::get_level_name(int levelid) const
+{
+    std::map<int, std::string>::const_iterator p = level_map.find(levelid);
+    if (p != level_map.end())
+        return p->second.c_str();
+    return 0;
+}
+
+void CRush::set_level_name(int levelid, const std::string& name)
+{
+    level_map[levelid] = name;
+    if (have_rmaps)
+        level_rmap[name] = levelid;
+}
+
+// ---------------- item name ----------------
+
+bool CRush::name_exists(const std::string& name) const
+{
+    build_rmaps();
+    return name_rmap.count(name);
+}
+
+bool CRush::item_exists(int i) const
+{
+    return name_map.count(i);
+}
+
+int CRush::get_item_id(const std::string& name) const
+{
+    build_rmaps();
+    if (name_rmap.count(name))
+        return name_rmap[name];
+    return 0;  /* hrm */
+}
+
+const char* CRush::get_item_name(int t) const
+{
+    std::map<int, std::string>::const_iterator p = name_map.find(t);
+    if (p != name_map.end())
+        return p->second.c_str();
+    return 0;
+}
+
+int CRush::set_item_name(int i, const std::string& name)
+{
+    name_map[i] = name;
+    if (have_rmaps)
+        name_rmap[name] = i;
+    return 0;
+}
+
+// ---------------- rule name ----------------
+
+bool CRush::ruleset_exists(uint8_t ruleset) const
+{
+    for ( uint32_t i = 0; i < m_crush->max_rules; ++i) {
+        if ( rule_exists(i) && m_crush->rules[i]->mask.ruleset == ruleset) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool CRush::rule_exists(int32_t ruleno) const
+{
+    if ( m_crush != NULL ) {
+        if ( ruleno < m_crush->max_rules && m_crush->rules[ruleno] != NULL ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CRush::rule_exists(const std::string &name) const
+{
+    build_rmaps();
+    return rule_name_rmap.count(name);
+}
+
+int CRush::get_rule_id(const std::string &name) const
+{
+    build_rmaps();
+    if (rule_name_rmap.count(name))
+        return rule_name_rmap[name];
+    return -ENOENT;
+}
+
+const char* CRush::get_rule_name(int ruleid) const
+{
+    std::map<int, std::string>::const_iterator p = rule_name_map.find(ruleid);
+    if (p != rule_name_map.end())
+        return p->second.c_str();
+    return 0;
+}
+
+void CRush::set_rule_name(int ruleid, const std::string& name)
+{
+    rule_name_map[ruleid] = name;
+    if (have_rmaps)
+        rule_name_rmap[name] = ruleid;
+}
+
+// ================ tunable ================
+
+void CRush::set_tunables_argonaut()
+{
+    m_crush->choose_local_tries = 2;
+    m_crush->choose_local_fallback_tries = 5;
+    m_crush->choose_total_tries = 19;
+    m_crush->chooseleaf_descend_once = 0;
+    m_crush->chooseleaf_vary_r = 0;
+}
+
+void CRush::set_tunables_bobtail()
+{
+    m_crush->choose_local_tries = 0;
+    m_crush->choose_local_fallback_tries = 0;
+    m_crush->choose_total_tries = 50;
+    m_crush->chooseleaf_descend_once = 1;
+    m_crush->chooseleaf_vary_r = 0;
+}
+
+void CRush::set_tunables_firefly()
+{
+    m_crush->choose_local_tries = 0;
+    m_crush->choose_local_fallback_tries = 0;
+    m_crush->choose_total_tries = 50;
+    m_crush->chooseleaf_descend_once = 1;
+    m_crush->chooseleaf_vary_r = 1;
+}
+
+void CRush::set_tunables_hammer()
+{
+    m_crush->choose_local_tries = 0;
+    m_crush->choose_local_fallback_tries = 0;
+    m_crush->choose_total_tries = 50;
+    m_crush->chooseleaf_descend_once = 1;
+    m_crush->chooseleaf_vary_r = 1;
+}
+
+void CRush::set_tunables_legacy()
+{
+    set_tunables_argonaut();
+    m_crush->straw_calc_version = 0;
+}
+
+void CRush::set_tunables_optimal()
+{
+    set_tunables_hammer();
+    m_crush->straw_calc_version = 1;
+}
+
+void CRush::set_tunables_default()
+{
+    set_tunables_bobtail();
+    m_crush->straw_calc_version = 1;
+}
+
+// ================ utils ================
+
+bool CRush::check_item_loc(int item, const std::map<std::string, std::string>& loc, int *weight)
+{
+    //ldout(cct, 5) << "check_item_loc item " << item << " loc " << loc << dendl;
+
+    for ( std::map<int, std::string>::const_iterator p = level_map.begin(); p != level_map.end(); ++p) {
+        // ignore device
+        if (p->first == 0)
+            continue;
+
+        // ignore types that aren't specified in loc
+        std::map<std::string, std::string>::const_iterator q = loc.find(p->second);
+        if (q == loc.end()) {
+            //ldout(cct, 2) << "warning: did not specify location for '" << p->second << "' level (levels are "
+                //<< type_map << ")" << dendl;
+            continue;
+        }
+
+        if (!name_exists(q->second)) {
+            //ldout(cct, 5) << "check_item_loc bucket " << q->second << " dne" << dendl;
+            return false;
+        }
+
+        int id = get_item_id(q->second);
+        if (id >= 0) {
+            //ldout(cct, 5) << "check_item_loc requested " << q->second << " for type " << p->second
+                //<< " is a device, not bucket" << dendl;
+            return false;
+        }
+
+        crush_bucket *b = get_bucket(id);
+
+        // see if item exists in this bucket
+        for (unsigned j=0; j<b->size; j++) {
+            if (b->items[j] == item) {
+                //ldout(cct, 2) << "check_item_loc " << item << " exists in bucket " << b->id << dendl;
+                if (weight)
+                    *weight = crush_get_bucket_item_weight(b, j);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //ldout(cct, 1) << "check_item_loc item " << item << " loc " << loc << dendl;
+    return false;
+}
+
+bool CRush::check_item_loc(int item, const std::map<std::string, std::string>& loc, float *weight)
+{
+    int iweight;
+    bool ret = check_item_loc(item, loc, &iweight);
+    if (weight)
+        *weight = (float)iweight / (float)0x10000;
+    return ret;
+}
+
+bool CRush::_search_item_exists(int item) const
+{
+    for (int i = 0; i < m_crush->max_buckets; i++) {
+        if (!m_crush->buckets[i])
+            continue;
+        crush_bucket *b = m_crush->buckets[i];
+        for (unsigned j=0; j<b->size; ++j) {
+            if (b->items[j] == item)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool CRush::_maybe_remove_last_instance(int item, bool unlink_only)
+{
+    // last instance?
+    if (_search_item_exists(item)) {
+        return false;
+    }
+
+    if (item < 0 && !unlink_only) {
+        crush_bucket *t = get_bucket(item);
+        //ldout(cct, 5) << "_maybe_remove_last_instance removing bucket " << item << dendl;
+        crush_remove_bucket(m_crush, t);
+    }
+    if ((item >= 0 || !unlink_only) && name_map.count(item)) {
+        //ldout(cct, 5) << "_maybe_remove_last_instance removing name for item " << item << dendl;
+        name_map.erase(item);
+        have_rmaps = false;
+    }
+    return true;
+}
+
+int CRush::detach_bucket(int item)
+{
+    if (item >= 0)
+        return (-EINVAL);
+
+    // get the bucket's weight
+    crush_bucket *b = get_bucket(item);
+    if ( b == NULL ) return -EINVAL;
+    unsigned bucket_weight = b->weight;
+
+    // get where the bucket is located. return <level_name, item_name>.
+    std::pair<std::string, std::string> bucket_location = get_immediate_parent(item);
+
+    // get the id of the parent bucket
+    int parent_id = get_item_id(bucket_location.second);
+
+    // get the parent bucket
+    crush_bucket *parent_bucket = get_bucket(parent_id);
+
+    if (parent_bucket != NULL){
+        // zero out the bucket weight
+        crush_bucket_adjust_item_weight(m_crush, parent_bucket, item, 0);
+        adjust_item_weight(parent_bucket->id, parent_bucket->weight);
+
+        // remove the bucket from the parent
+        crush_bucket_remove_item(m_crush, parent_bucket, item);
+    } else {
+        return -1;
+    }
+
+    // check that we're happy
+    //int test_weight = 0;
+    //std::map<std::string, std::string> test_location;
+    //test_location[ bucket_location.first ] = (bucket_location.second);
+
+    //bool successful_detach = !(check_item_loc(cct, item, test_location, &test_weight));
+    //assert(successful_detach);
+    //assert(test_weight == 0);
+
+    return bucket_weight;
+}
+
+// <level_name, item_name>
+std::pair<std::string, std::string> CRush::get_immediate_parent(int id, int *_ret) const
+{
+    std::pair <std::string, std::string> loc;
+    int ret = -ENOENT;
+
+    for (int bidx = 0; bidx < m_crush->max_buckets; bidx++) {
+        crush_bucket *b = m_crush->buckets[bidx];
+        if (b == NULL) continue;
+        for (uint32_t i = 0; i < b->size; i++)
+            if (b->items[i] == id) {
+                std::map<int32_t, std::string>::const_iterator it = level_map.find(b->type);
+                std::string parent_bucket_level = it->second;
+                std::map<int32_t, std::string>::const_iterator it1 = name_map.find(b->id);
+                std::string parent_bucket_name = it1->second;
+                loc = std::make_pair(parent_bucket_level, parent_bucket_name);
+                ret = 0;
+                break;
+            }
+    }
+
+    if (_ret)
+        *_ret = ret;
+
+    return loc;
+}
+
+std::map<std::string, std::string> CRush::get_full_location(int id) const
+{
+    std::vector<std::pair<std::string, std::string> > full_location_ordered;
+    std::map<std::string, std::string> full_location;
+
+    get_full_location_ordered(id, full_location_ordered);
+
+    std::copy(full_location_ordered.begin(),
+            full_location_ordered.end(),
+            std::inserter(full_location, full_location.begin()));
+
+    return full_location;
+}
+
+int CRush::get_full_location_ordered(int id, std::vector<std::pair<std::string, std::string> >& path) const
+{
+    if (!item_exists(id))
+        return -ENOENT;
+    int cur = id;
+    int ret;
+    while (true) {
+        std::pair<std::string, std::string> parent_coord = get_immediate_parent(cur, &ret);
+        if (ret != 0)
+            break;
+        path.push_back(parent_coord);
+        cur = get_item_id(parent_coord.second);
+    }
+    return 0;
+}
+
+
+std::map<int, std::string> CRush::get_parent_hierarchy(int id) const
+{
+    std::map<int, std::string> parent_hierarchy;
+    std::pair<std::string, std::string> parent_coord = get_immediate_parent(id);
+    int parent_id;
+
+    // get the integer type for id and create a counter from there
+
+    const crush_bucket *b = get_bucket(id);
+    if ( b == NULL ) return parent_hierarchy;
+    int type_counter = b->type;
+
+    // if we get a negative type then we can assume that we have an OSD
+    // change behavior in get_item_type FIXME
+    if (type_counter < 0)
+        type_counter = 0;
+
+    // read the type map and get the name of the type with the largest ID
+    int high_type = 0;
+    for ( std::map<int, std::string>::const_iterator it = level_map.begin(); it != level_map.end(); ++it){
+        if ( (*it).first > high_type )
+            high_type = (*it).first;
+    }
+
+    parent_id = get_item_id(parent_coord.second);
+
+    while (type_counter < high_type) {
+        type_counter++;
+        parent_hierarchy[ type_counter ] = parent_coord.first;
+
+        if (type_counter < high_type){
+            // get the coordinate information for the next parent
+            parent_coord = get_immediate_parent(parent_id);
+            parent_id = get_item_id(parent_coord.second);
+        }
+    }
+    return parent_hierarchy;
+}
+
+int CRush::get_children(int id, std::list<int> *children) const
+{
+    // leaf?
+    if (id >= 0) {
+        return 0;
+    }
+
+    crush_bucket *b = get_bucket(id);
+    if (!b) {
+        return -ENOENT;
+    }
+
+    for (unsigned n=0; n<b->size; n++) {
+        children->push_back(b->items[n]);
+    }
+    return b->size;
+}
+
+bool CRush::subtree_contains(int root, int item) const
+{
+    if (root == item)
+        return true;
+
+    if (root >= 0)
+        return false;  // root is a leaf
+
+    const crush_bucket *b = get_bucket(root);
+    if (!b)
+        return false;
+
+    for (unsigned j=0; j<b->size; j++) {
+        if (subtree_contains(b->items[j], item))
+            return true;
+    }
+    return false;
+}
+
+void CRush::find_roots(std::set<int>& roots) const
+{
+    for (int i = 0; i < m_crush->max_buckets; i++) {
+        if (!m_crush->buckets[i]) continue;
+        crush_bucket *b = m_crush->buckets[i];
+        if (!_search_item_exists(b->id))
+            roots.insert(b->id);
+    }
 }
 

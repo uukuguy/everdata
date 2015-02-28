@@ -1,12 +1,11 @@
 
 EDBROKER = ../../bin/edbroker
-EDBROKER_OBJS = edbroker_main.c.o edbroker.c.o
+EDBROKER_OBJS = edbroker_main.cc.o edbroker.cc.o
 
 EDWORKER = ../../bin/edworker
-EDWORKER_OBJS = edworker_main.c.o edworker.c.o datanode.c.o bucket.c.o channel.c.o object.c.o bucketdb.c.o
-#container.c.o 
+EDWORKER_OBJS = edworker_main.cc.o edworker.cc.o datanode.cc.o bucket.cc.o channel.cc.o object.cc.o bucketdb.cc.o
 EDCLIENT = ../../bin/edclient
-EDCLIENT_OBJS = edclient_main.c.o edclient.c.o
+EDCLIENT_OBJS = edclient_main.cc.o edclient.cc.o
 
 EDFS = ../../bin/edfs
 EDFS_OBJS = edfs.c.o
@@ -32,6 +31,7 @@ FINAL_LDFLAGS += ${LIBCRUSH} ${LIBKVDB} ${LIBUTILS}
 FINAL_LDFLAGS += -lczmq -lzmq -ljemalloc
 FINAL_LDFLAGS += -llmdb -lleveldb
 FINAL_LDFLAGS += -lmsgpack -lbz2
+FINAL_LDFLAGS += -lstdc++
 
 ifeq (${UNAME}, Darwin)
 	FINAL_LDFLAGS += -losxfuse -ldl
@@ -53,8 +53,8 @@ ${EDWORKER}: ${LIBBASE} ${LIBSERVER_OBJS} ${EDWORKER_OBJS}
 ${EDCLIENT}: ${LIBBASE} ${EDCLIENT_OBJS} 
 	${CC} -o ${EDCLIENT} ${EDCLIENT_OBJS} ${FINAL_LDFLAGS}
 
-${EDFS}: edclient.c.o ${LIBBASE} ${EDFS_OBJS} 
-	${CC} -o ${EDFS} ${EDFS_OBJS} edclient.c.o ${FINAL_LDFLAGS}
+${EDFS}: edclient.cc.o ${LIBBASE} ${EDFS_OBJS} 
+	${CC} -o ${EDFS} ${EDFS_OBJS} edclient.cc.o ${FINAL_LDFLAGS}
 
 clean:
 	rm -f ${EDBROKER} ${EDBROKER_OBJS} ${EDWORKER} ${EDWORKER_OBJS} ${EDCLIENT} ${EDCLIENT_OBJS}

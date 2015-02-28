@@ -51,7 +51,7 @@ int prepare_file_data(const char *filename)
     uint32_t size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char *buf = zmalloc(size);
+    char *buf = (char*)zmalloc(size);
 
     memset(buf, 0, sizeof(size));
     uint32_t readed = fread(buf, 1, size, file);
@@ -312,7 +312,7 @@ edclient_t *edclient_new(const char *endpoint, int op_code, uint32_t total_clien
 /* ================ edclient_free() ================ */
 void edclient_free(edclient_t *edclient)
 {
-    ZPIPE_FREE(edclient, client_free);
+    ZPIPE_FREE(edclient, client_free, client_t);
 
     free(edclient);
 }

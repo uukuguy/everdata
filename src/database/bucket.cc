@@ -192,7 +192,7 @@ bucket_t *bucket_new(datanode_t *datanode, uint32_t bucket_id)
 /* ================ bucket_free() ================ */
 void bucket_free(bucket_t *bucket)
 {
-    ZPIPE_FREE(bucket, channel_free);
+    ZPIPE_FREE(bucket, channel_free, channel_t);
 
     ZPIPE_ACTOR_FREE(bucket);
 

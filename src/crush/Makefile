@@ -20,7 +20,7 @@ all: ${TARGET} ${APP}
 ${TARGET}: ${OBJS}
 	${AR} curv ${TARGET} ${OBJS}
 
-${APP}: ${APP_OBJS}
+${APP}: ${APP_OBJS} ${TARGET}
 	${CC} -o ${APP} ${APP_OBJS} ${TARGET} -lstdc++
 
 clean:

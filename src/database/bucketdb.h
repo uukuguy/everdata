@@ -2,10 +2,10 @@
  * @file   bucketdb.h
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-28 17:18:35
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #ifndef __BUCKETDB_H__
@@ -49,7 +49,7 @@ void slicedb_free(slicedb_t *slicedb);
 typedef struct bucketdb_t {
     uint32_t id;
     char root_dir[NAME_MAX];
-    enum eBucketDBType storage_type;
+    int storage_type;
 
     kvdb_t *kvdb_metadata;
 
@@ -59,7 +59,7 @@ typedef struct bucketdb_t {
 
 } bucketdb_t;
 
-bucketdb_t *bucketdb_new(const char *root_dir, uint32_t id, enum eBucketDBType storage_type);
+bucketdb_t *bucketdb_new(const char *root_dir, uint32_t id, int storage_type);
 void bucketdb_free(bucketdb_t *bucketdb);
 
 int bucketdb_put_metadata(bucketdb_t *bucketdb, const char *key, const char *data, uint32_t data_size);

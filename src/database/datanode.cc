@@ -46,7 +46,7 @@ datanode_t *datanode_new(uint32_t total_buckets, uint32_t total_channels, int st
 /* ================ datanode_free() ================ */
 void datanode_free(datanode_t *datanode)
 {
-    ZPIPE_FREE(datanode, bucket_free);
+    ZPIPE_FREE(datanode, bucket_free, bucket_t);
 
     free(datanode);
 }

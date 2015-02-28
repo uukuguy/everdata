@@ -12,7 +12,14 @@
 #define __ZPIPE_H__
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _zactor_t zactor_t;
+typedef struct _zsock_t zsock_t;
+typedef void (zactor_fn)(zsock_t *pipe, void *args);
 
 typedef struct zpipe_t {
     uint32_t total_actors;
@@ -54,9 +61,9 @@ void zpipe_actor_root_thread_main(zsock_t *pipe, void *user_data);
         master->zpipe->actors[i] = slave; \
     }
 
-#define ZPIPE_FREE(master, slave_free) \
+#define ZPIPE_FREE(master, slave_free, slave_type) \
     for ( uint32_t i = 0 ; i < master->zpipe->total_actors ; i++ ){ \
-        slave_free(master->zpipe->actors[i]); \
+        slave_free((slave_type *)master->zpipe->actors[i]); \
         master->zpipe->actors[i] = NULL; \
     } \
     free(master->zpipe->actors);\
@@ -88,6 +95,10 @@ void zpipe_actor_root_thread_main(zsock_t *pipe, void *user_data);
 
 //#define ZPIPE_ACTOR_THREAD_END(pipe) \
         //zpipe_actor_thread_end(pipe);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __ZPIPE_H__
 

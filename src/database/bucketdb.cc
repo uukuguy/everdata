@@ -45,7 +45,7 @@ void slicedb_free(slicedb_t *slicedb)
 }
 
 /* ================ create_kvenv() ================= */
-kvenv_t *create_kvenv(const char *dbpath, eBucketDBType storage_type, uint64_t max_dbsize, uint32_t max_dbs)
+kvenv_t *create_kvenv(const char *dbpath, int storage_type, uint64_t max_dbsize, uint32_t max_dbs)
 {
     kvenv_t *kvenv = NULL;
 
@@ -71,7 +71,7 @@ kvenv_t *create_kvenv(const char *dbpath, eBucketDBType storage_type, uint64_t m
 }
 
 /* ================ open_kvdb() ================= */
-kvdb_t *open_kvdb(const char *dbname, eBucketDBType storage_type, const char *root_dir, uint64_t max_dbsize, uint32_t max_dbs)
+kvdb_t *open_kvdb(const char *dbname, int storage_type, const char *root_dir, uint64_t max_dbsize, uint32_t max_dbs)
 {
     char dbpath[NAME_MAX];
     sprintf(dbpath, "%s/%s", root_dir, dbname);
@@ -111,7 +111,7 @@ slicedb_t *bucketdb_open_slicedb(bucketdb_t *bucketdb, uint32_t db_id)
 }
 
 /* ================ bucketdb_new() ================= */
-bucketdb_t *bucketdb_new(const char *root_dir, uint32_t id, enum eBucketDBType storage_type)
+bucketdb_t *bucketdb_new(const char *root_dir, uint32_t id, int storage_type)
 {
     bucketdb_t *bucketdb = (bucketdb_t*)zmalloc(sizeof(bucketdb_t));
     memset(bucketdb, 0, sizeof(bucketdb_t));

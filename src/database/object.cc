@@ -155,7 +155,7 @@ object_t *object_new(const char *key, uint32_t keylen)
     memset(object, 0, sizeof(object_t));
 
     if ( key != NULL ){
-        object->key = zmalloc(keylen);
+        object->key = (char *)zmalloc(keylen);
         object->keylen = keylen;
         memcpy(object->key, key, keylen);
 
@@ -181,7 +181,7 @@ void object_free(object_t *object)
         g_iterator_t *it = g_list_begin(slices);
         g_iterator_t *itend = g_list_end(slices);
         while ( g_iterator_compare(it, itend) != 0 ){
-            slice_t *slice = g_iterator_get(it);
+            slice_t *slice = (slice_t*)g_iterator_get(it);
             if ( slice != NULL ){
                 slice_free(slice);
             }

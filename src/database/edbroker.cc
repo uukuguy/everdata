@@ -16,7 +16,7 @@
 #include "everdata.h"
 
 #include "cboost.h"
-/*#include "crush.hpp"*/
+#include "crush.hpp"
 
 /* -------- struct worker_t -------- */
 typedef struct worker_t {
@@ -60,6 +60,8 @@ typedef struct broker_t{
 
     g_stringmap_t *backends;
     g_vector_t *select_backends;
+
+    CRush m_rush;
 
 } broker_t;
 
@@ -160,7 +162,7 @@ void refresh_select_backends(broker_t *broker)
     g_iterator_t *it = g_stringmap_begin(broker->backends);
     g_iterator_t *itend = g_stringmap_end(broker->backends);
     while ( g_iterator_compare(it, itend) != 0 ){
-        worker_t *w = g_iterator_get(it);
+        worker_t *w = (worker_t*)g_iterator_get(it);
         g_vector_push_back(backends, w);
         g_iterator_next(it);
     }
@@ -186,7 +188,7 @@ worker_t *broker_set_worker_ready(broker_t *broker, zframe_t *worker_identity)
     worker_t *worker = NULL;
     if ( g_iterator_compare(it, itend) != 0){
         worker_found = 1;
-        worker = g_iterator_get(it);
+        worker = (worker_t*)g_iterator_get(it);
     } else {
         worker_found = 0;
         worker = worker_new(worker_identity);
@@ -278,7 +280,7 @@ zframe_t *broker_choose_worker_identity(broker_t *broker, zmsg_t *msg)
                         size_t total_backends = g_vector_size(backends);
                         if ( total_backends > 0 ){
                             int idx = key_md5.h1 % total_backends;
-                            worker_t *worker = g_vector_get_element(backends, idx);
+                            worker_t *worker = (worker_t*)g_vector_get_element(backends, idx);
                             if ( worker != NULL ){
                                 worker_identity = zframe_dup(worker->identity);
                                 /*notice_log("Choose worker identity: %s, key: %s", worker->id_string, key);*/

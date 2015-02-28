@@ -16,6 +16,8 @@ zeromq
 zeromq*/
 jemalloc
 jemalloc*/
+libcstl
+libcstl*/
 
 # Compiled Object files
 *.slo

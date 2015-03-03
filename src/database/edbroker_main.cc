@@ -2,10 +2,10 @@
  * @file   main.c
  * @author Jiangwen Su <uukuguy@gmail.com>
  * @date   2014-11-07 23:47:06
- * 
- * @brief  
- * 
- * 
+ *
+ * @brief
+ *
+ *
  */
 
 #include "common.h"
@@ -21,6 +21,7 @@ typedef struct{
     const char *backend;
 
     int is_daemon;
+    int is_stub;
     int log_level;
 } program_options_t;
 
@@ -28,6 +29,7 @@ static struct option const long_options[] = {
 	{"frontend", required_argument, NULL, 'f'},
 	{"backend", required_argument, NULL, 'b'},
 	{"threads", required_argument, NULL, 'u'},
+	{"stub", no_argument, NULL, 's'},
 	{"daemon", no_argument, NULL, 'd'},
 	{"verbose", no_argument, NULL, 'v'},
 	{"trace", no_argument, NULL, 't'},
@@ -35,20 +37,20 @@ static struct option const long_options[] = {
 
 	{NULL, 0, NULL, 0},
 };
-static const char *short_options = "f:b:u:dvth";
+static const char *short_options = "f:b:u:sdvth";
 
-extern int run_broker(const char *frontend, const char *backend, int verbose);
+extern int run_broker(const char *frontend, const char *backend, int is_stub, int verbose);
 
-/* ==================== daemon_loop() ==================== */ 
+/* ==================== daemon_loop() ==================== */
 int daemon_loop(void *data)
 {
     notice_log("In daemon_loop()");
 
     const program_options_t *po = (const program_options_t *)data;
-    return run_broker(po->frontend, po->backend, po->log_level >= LOG_DEBUG ? 1 : 0);
+    return run_broker(po->frontend, po->backend, po->is_stub, po->log_level >= LOG_DEBUG ? 1 : 0);
 }
 
-/* ==================== usage() ==================== */ 
+/* ==================== usage() ==================== */
 static void usage(int status)
 {
     if ( status )
@@ -60,6 +62,7 @@ static void usage(int status)
                 -f, --frontend          specify the edbroker frontend endpoint\n\
                 -b, --backend          specify the edbroker backend endpoint\n\
                 -u, --threads           count of threads\n\
+                -s, --stub            run in the stub mode. \n\
                 -d, --daemon            run in the daemon mode. \n\
                 -v, --verbose           print debug messages\n\
                 -t, --trace             print trace messages\n\
@@ -78,6 +81,7 @@ int main(int argc, char *argv[])
     po.backend = "tcp://*:19978";
 
     po.is_daemon = 0;
+    po.is_stub = 0;
     po.log_level = LOG_INFO;
 
 	int ch, longindex;
@@ -89,6 +93,9 @@ int main(int argc, char *argv[])
                 break;
             case 'b':
                 po.backend = optarg;
+                break;
+            case 's':
+                po.is_stub = 1;
                 break;
             case 'd':
                 po.is_daemon = 1;
@@ -123,8 +130,8 @@ int main(int argc, char *argv[])
         return -1;
 
     if ( po.is_daemon ){
-        return daemon_fork(daemon_loop, (void*)&po); 
-    } else 
-        return run_broker(po.frontend, po.backend, po.log_level >= LOG_DEBUG ? 1 : 0);
+        return daemon_fork(daemon_loop, (void*)&po);
+    } else
+        return run_broker(po.frontend, po.backend, po.is_stub, po.log_level >= LOG_DEBUG ? 1 : 0);
 }
 

@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include "common.h"
 #include "logger.h"
-#include "md5.h"
+#include "farmhash.h"
 #include "everdata.h"
 
 #include "cboost.h"
@@ -61,6 +61,8 @@ typedef struct broker_t{
     g_stringmap_t *backends;
     g_vector_t *select_backends;
 
+    int is_stub;
+
     CRush m_rush;
 
 } broker_t;
@@ -77,6 +79,8 @@ broker_t *broker_new(void)
 
     broker->backends = g_stringmap_new();
     broker->select_backends = g_vector_new();
+
+    broker->is_stub = 0;
 
     return broker;
 }
@@ -263,8 +267,9 @@ zframe_t *broker_choose_worker_identity(broker_t *broker, zmsg_t *msg)
                         const char *key = (const char *)zframe_data(frame_key);
                         UNUSED uint32_t key_len = zframe_size(frame_key);
 
-                        md5_value_t key_md5;
-                        md5(&key_md5, (uint8_t *)key, key_len);
+                        //md5_value_t key_md5;
+                        //md5(&key_md5, (uint8_t *)key, key_len);
+                        int32_t hash = util::Hash32(key, key_len);
 
                         /*g_vector_t *backends = g_vector_new();*/
                         /*g_iterator_t *it = g_stringmap_begin(broker->backends);*/
@@ -279,7 +284,8 @@ zframe_t *broker_choose_worker_identity(broker_t *broker, zmsg_t *msg)
                         g_vector_t *backends = broker->select_backends;
                         size_t total_backends = g_vector_size(backends);
                         if ( total_backends > 0 ){
-                            int idx = key_md5.h1 % total_backends;
+                            //int idx = key_md5.h1 % total_backends;
+                            int idx = hash % total_backends;
                             worker_t *worker = (worker_t*)g_vector_get_element(backends, idx);
                             if ( worker != NULL ){
                                 worker_identity = zframe_dup(worker->identity);
@@ -309,20 +315,23 @@ int handle_pullin_on_local_frontend(zloop_t *loop, zsock_t *sock, void *user_dat
     }
     /*zmsg_print(msg);*/
 
-    zframe_t *worker_identity = broker_choose_worker_identity(broker, msg);
-
-    if ( worker_identity != NULL ){
-        /* for req */
-        /*zmsg_pushmem(msg, "", 0);*/
-
-        zmsg_push(msg, worker_identity);
-
-        zmsg_send(&msg, broker->sock_local_backend);
-    } else {
+    if ( broker->is_stub ) {
         zmsg_t *sendback_msg = create_sendback_message(msg);
-        message_add_status(sendback_msg, MSG_STATUS_WORKER_ERROR);
-
+        message_add_status(sendback_msg, MSG_STATUS_WORKER_ACK);
         zmsg_send(&sendback_msg, sock);
+    } else {
+        zframe_t *worker_identity = broker_choose_worker_identity(broker, msg);
+
+        if ( worker_identity != NULL ){
+            /* for req */
+            /*zmsg_pushmem(msg, "", 0);*/
+            zmsg_push(msg, worker_identity);
+            zmsg_send(&msg, broker->sock_local_backend);
+        } else {
+            zmsg_t *sendback_msg = create_sendback_message(msg);
+            message_add_status(sendback_msg, MSG_STATUS_WORKER_ERROR);
+            zmsg_send(&sendback_msg, sock);
+        }
     }
 
     zmsg_destroy(&msg);
@@ -418,12 +427,13 @@ int handle_heartbeat_timer(zloop_t *loop, int timer_id, void *user_data)
 }
 
 /* ================ run_broker() ================ */
-int run_broker(const char *frontend, const char *backend, int verbose)
+int run_broker(const char *frontend, const char *backend, int is_stub, int verbose)
 {
     info_log("run_broker() with frontend:%s backend:%s", frontend, backend);
 
     int rc = 0;
     broker_t *broker = broker_new();
+    broker->is_stub = is_stub;
 
     zsock_t *sock_local_frontend = zsock_new_router(frontend);
     zsock_t *sock_local_backend = zsock_new_router(backend);

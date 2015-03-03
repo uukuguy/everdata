@@ -18,15 +18,15 @@ int main(int argc, char *argv[])
     crush.set_type_name(2, "host");
     crush.set_type_name(10, "root");
 
-    int rootno;
-    int bucket_id = 0; // 0 for auto id.
-    std::string item_type = "root";
-    int type_id = crush.get_type_id(item_type);
-    crush.add_bucket(bucket_id, type_id, 0, NULL, NULL, &rootno);
-    crush.set_item_name(rootno, "root.0");
+    int root_id;
+    std::string root_name = "root.0";
+    int root_type = crush.get_type_id("root");
 
-    int item_id = crush.get_item_id("root.0");
-    std::cout << "rootno: " << rootno << " item_id: " << item_id << std::endl;
+    int bucket_id = 0; // 0 for auto id.
+    crush.add_bucket(root_name, bucket_id, root_type, 0, 0, NULL, NULL, &root_id);
+
+    int item_id = crush.get_item_id(root_name);
+    std::cout << "root_id: " << root_id << " item_id: " << item_id << std::endl;
 
     int num_host = 1;
     int num_datanode = 2;

@@ -157,7 +157,7 @@ class CRush
     public:
 
         // bucketno = 0 for auto id.
-        int add_bucket(int bucket_id, int type, int size, int *items, int *weights, int *idout, int alg = 0);
+        int add_bucket(const std::string &bucket_name, int bucket_id, int type, int alg, int size, int *items, int *weights, int *new_id);
         int move_bucket(int bucket_id, const std::map<std::string, std::string>& loc);
         int link_bucket(int bucket_id, const std::map<std::string, std::string>& loc);
         crush_bucket *get_bucket(int bucket_id) const;

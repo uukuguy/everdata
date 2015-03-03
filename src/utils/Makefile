@@ -10,12 +10,17 @@ OBJS = logger.c.o \
 	   sysinfo.c.o \
 	   md5.c.o \
 	   crc32.c.o \
+	   farmhash.cc.o \
 	   zmalloc.c.o \
 	   message.c.o \
 	   zpipe.c.o \
 	   cboost.cc.o
 
 include ../Makefile.common
+
+# first try -mavx -maes, if fails, retry with -mavx and/or -maes removed, 
+# or with -mavx replaced by -msse4.1 or -msse4.2.
+CXXFLAGS += -mavx -maes
 
 all: ${TARGET}
 

@@ -112,7 +112,7 @@ int32_t CRush::get_max_rules() const
 
 // ================ buckets ================
 
-int CRush::add_bucket(int bucket_id, int type, int size, int *items, int *weights, int *idout, int alg)
+int CRush::add_bucket(const std::string &bucket_name, int bucket_id, int type, int alg, int size, int *items, int *weights, int *new_id)
 {
     if (type == 0)
         return -EINVAL;
@@ -120,7 +120,11 @@ int CRush::add_bucket(int bucket_id, int type, int size, int *items, int *weight
     if ( alg == 0 ) alg = CRUSH_BUCKET_STRAW;
     int hash = CRUSH_HASH_DEFAULT;
     crush_bucket *b = crush_make_bucket(m_crush, alg, hash, type, size, items, weights);
-    return crush_add_bucket(m_crush, bucket_id, b, idout);
+    int ret = crush_add_bucket(m_crush, bucket_id, b, new_id);
+    if ( ret == 0 ){
+        set_item_name(*new_id, bucket_name);
+    }
+    return ret;
 }
 
 int CRush::move_bucket(int bucket_id, const std::map<std::string, std::string>& loc)
@@ -225,23 +229,21 @@ int CRush::insert_item(int item_id, float weight, std::string name, const std::m
             continue;
         }
 
+        std::string bucket_name = q->second;
         std::cout << "*** q: " << q->first << ", " << q->second << std::endl;
 
-        if (!name_exists(q->second)) {
-            std::cout << "insert_item creating bucket " << q->second << std::endl;
+        if (!name_exists(bucket_name)) {
+            std::cout << "insert_item creating bucket " << bucket_name << std::endl;
             int empty = 0, newid;
-            int r = add_bucket(0, p->first, 1, &cur, &empty, &newid);
-            if (r < 0) {
-                return r;
-            }
-            set_item_name(newid, q->second);
+            int r = add_bucket(bucket_name, 0, p->first, 0, 1, &cur, &empty, &newid);
+            if (r != 0) return r;
 
             cur = newid;
             continue;
         }
 
         // add to an existing bucket
-        int id = get_item_id(q->second);
+        int id = get_item_id(bucket_name);
         std::cout << "*** cur: " << cur << " id: " << id << " q: " << q->first << ", " << q->second << std::endl;
 
         crush_bucket *b = get_bucket(id);
@@ -251,10 +253,10 @@ int CRush::insert_item(int item_id, float weight, std::string name, const std::m
         }
 
         // check that we aren't creating a cycle.
-        //if (subtree_contains(id, cur)) {
-            //ldout(cct, 1) << "insert_item item " << cur << " already exists beneath " << id << dendl;
-            //return -EINVAL;
-        //}
+        if (subtree_contains(id, cur)) {
+            std::cout << "insert_item item " << cur << " already exists beneath " << id << std::endl;
+            return -EINVAL;
+        }
 
         if (p->first != b->type) {
             std::cout << "insert_item existing bucket has type "
@@ -264,11 +266,11 @@ int CRush::insert_item(int item_id, float weight, std::string name, const std::m
         }
 
         // are we forming a loop?
-        //if (subtree_contains(cur, b->id)) {
-            //ldout(cct, 1) << "insert_item " << cur << " already contains " << b->id
-                //<< "; cannot form loop" << dendl;
-            //return -ELOOP;
-        //}
+        if (subtree_contains(cur, b->id)) {
+            std::cout << "insert_item " << cur << " already contains " << b->id
+                << "; cannot form loop" << std::endl;
+            return -ELOOP;
+        }
 
         std::cout << "insert_item adding " << cur << " weight " << weight
             << " to bucket " << id << std::endl;
@@ -347,9 +349,8 @@ int CRush::remove_item(int item_id, bool unlink_only)
     }
 
     for (int i = 0; i < m_crush->max_buckets; i++) {
-        if (!m_crush->buckets[i])
-            continue;
         crush_bucket *b = m_crush->buckets[i];
+        if ( b == NULL ) continue;
 
         for (unsigned i=0; i < b->size; ++i) {
             int id = b->items[i];
@@ -379,8 +380,7 @@ int CRush::get_item_weight(int id) const
 {
     for (int bidx = 0; bidx < m_crush->max_buckets; bidx++) {
         crush_bucket *b = m_crush->buckets[bidx];
-        if (b == NULL)
-            continue;
+        if (b == NULL) continue;
         for (unsigned i = 0; i < b->size; i++)
             if (b->items[i] == id)
                 return crush_get_bucket_item_weight(b, i);
@@ -817,9 +817,8 @@ bool CRush::check_item_loc(int item, const std::map<std::string, std::string>& l
 bool CRush::_search_item_exists(int item) const
 {
     for (int i = 0; i < m_crush->max_buckets; i++) {
-        if (!m_crush->buckets[i])
-            continue;
         crush_bucket *b = m_crush->buckets[i];
+        if ( b == NULL ) continue;
         for (unsigned j=0; j<b->size; ++j) {
             if (b->items[j] == item)
                 return true;
@@ -1027,8 +1026,8 @@ bool CRush::subtree_contains(int root, int item) const
 void CRush::find_roots(std::set<int>& roots) const
 {
     for (int i = 0; i < m_crush->max_buckets; i++) {
-        if (!m_crush->buckets[i]) continue;
         crush_bucket *b = m_crush->buckets[i];
+        if ( b == NULL ) continue;
         if (!_search_item_exists(b->id))
             roots.insert(b->id);
     }

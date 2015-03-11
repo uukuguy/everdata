@@ -68,4 +68,19 @@ static inline void *zalloc(size_t size)
         msec = tv.tv_sec * 1000 + tv.tv_usec / 1000; \
     }
 
+int ones_in_binary(uint64_t lsh, uint64_t rhs, int n)
+{
+    int cnt = 0;
+    lhs ^= rhs;
+    while ( lhs && cnt <= n ){
+        lhs &= lhs - 1;
+        cnt++;
+    };
+    if (cnt <= n ){
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
 #endif

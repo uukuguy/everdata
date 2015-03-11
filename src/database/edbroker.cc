@@ -16,7 +16,6 @@
 #include "everdata.h"
 
 #include "cboost.h"
-#include "crush.hpp"
 
 /* -------- struct worker_t -------- */
 typedef struct worker_t {
@@ -62,8 +61,6 @@ typedef struct broker_t{
     g_vector_t *select_backends;
 
     int is_stub;
-
-    CRush m_rush;
 
 } broker_t;
 

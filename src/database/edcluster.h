@@ -22,6 +22,9 @@ typedef struct edcluster_t edcluster_t;
 edcluster_t *edcluster_new(void);
 void edcluster_free(edcluster_t *cluster);
 
+int edcluster_add_type(int type_id, const char *type_name);
+const char *edcluster_get_type_name(edcluster_t *cluster, int type_id);
+int edcluster_get_type_id(edcluster_t *cluster, const char *type_name);
 
 #ifdef __cplusplus
 }
